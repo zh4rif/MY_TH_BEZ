@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MY–TH BEZ · NCER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Noto+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --java:#16240F; --forest:#1E3318; --bark:#27412A;
+  --terr:#C4622D; --terr2:#D47840; --rust:#A85020;
+  --gold:#C9910E; --gold2:#E0A820; --gold3:#F2C84A;
+  --cream:#F2E8CC; --sand:#E0D0A8; --aged:#D8C8A0;
+  --sage:#7BAE68; --teal:#267A6A; --teal2:#35A08E;
+  --cobalt:#1E5080; --text:#E8DCC0; --muted:rgba(232,220,192,0.45);
+  --border:rgba(201,145,14,0.22); --border2:rgba(255,255,255,0.07);
+  --panel:rgba(20,34,14,0.97); --card:rgba(28,46,22,0.96);
+  --serif:'Playfair Display',Georgia,serif; --body:'Noto Sans',system-ui,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--java);color:var(--text);font-family:var(--body);overflow:hidden}
+::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:rgba(201,145,14,0.28);border-radius:2px}
+
+/* ══ KEYFRAMES ══ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
+@keyframes shimG{0%{background-position:-400%}100%{background-position:400%}}
+@keyframes pulse4{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.78)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes sway{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
+
+/* ══ BATIK SVG OVERLAY ══ */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  opacity:0.045;
+  background-image:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23C9910E'%3E%3Ccircle cx='40' cy='40' r='2.5'/%3E%3Ccircle cx='0' cy='0' r='2.5'/%3E%3Ccircle cx='80' cy='0' r='2.5'/%3E%3Ccircle cx='0' cy='80' r='2.5'/%3E%3Ccircle cx='80' cy='80' r='2.5'/%3E%3Cpath d='M40 0 L42 18 L40 20 L38 18 Z M40 60 L42 78 L40 80 L38 78 Z M0 40 L18 42 L20 40 L18 38 Z M60 40 L78 42 L80 40 L78 38 Z' fill-opacity='0.6'/%3E%3Cpath d='M20 20 Q40 10 60 20 Q70 40 60 60 Q40 70 20 60 Q10 40 20 20' fill='none' stroke='%23C9910E' stroke-width='0.5' opacity='0.5'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ══ TOPBAR ══ */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:1500;height:60px;
+  background:linear-gradient(90deg,rgba(14,22,8,0.99) 0%,rgba(20,34,12,0.99) 100%);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:stretch;padding:0;
+  backdrop-filter:blur(24px);
+  box-shadow:0 3px 24px rgba(0,0,0,0.6);
+}
+.topbar::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold) 20%,var(--terr2) 50%,var(--gold2) 80%,transparent)}
+.topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(201,145,14,0.4),transparent)}
+
+.tb-brand{
+  padding:0 1.4rem;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;justify-content:center;min-width:235px;
+  background:linear-gradient(135deg,rgba(201,145,14,0.08),transparent);
+}
+.tb-brand-title{
+  font-family:var(--serif);font-size:1.22rem;font-weight:900;letter-spacing:2.5px;
+  background:linear-gradient(90deg,var(--gold),var(--gold2),var(--terr2),var(--gold3),var(--gold));
+  background-size:300% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  animation:shimG 5s linear infinite;line-height:1;
+}
+.tb-brand-sub{font-size:0.55rem;letter-spacing:3.5px;text-transform:uppercase;color:var(--sage);margin-top:4px}
+
+.tb-nav{display:flex;align-items:stretch;padding:0 0.5rem;gap:2px}
+.tb-btn{
+  display:flex;align-items:center;gap:7px;padding:0 1.2rem;
+  font-family:var(--body);font-size:0.71rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  border:none;background:none;color:var(--muted);cursor:pointer;position:relative;transition:color 0.25s;
+}
+.tb-btn .bi{font-size:1.05rem}
+.tb-btn::after{content:'';position:absolute;bottom:0;left:0.5rem;right:0.5rem;height:2px;background:var(--terr2);transform:scaleX(0);transition:transform 0.3s cubic-bezier(.4,0,.2,1);border-radius:2px 2px 0 0}
+.tb-btn.active{color:var(--gold2)} .tb-btn.active::after{transform:scaleX(1)}
+.tb-btn:hover:not(.active){color:var(--cream)}
+.tb-div{width:1px;background:var(--border);margin:12px 0.4rem}
+.tb-right{margin-left:auto;display:flex;align-items:stretch;border-left:1px solid var(--border)}
+.tb-stat{padding:0 1.1rem;border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center}
+.tb-sv{font-family:var(--serif);font-size:1.1rem;font-weight:700;color:var(--gold2);line-height:1}
+.tb-sl{font-size:0.52rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.tb-live{padding:0 1.1rem;display:flex;align-items:center;gap:7px;font-size:0.61rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--sage)}
+.tb-ld{width:7px;height:7px;border-radius:50%;background:var(--sage);animation:pulse4 2.5s infinite;flex-shrink:0}
+
+/* ══ SHELL ══ */
+.shell{display:flex;height:100vh;padding-top:60px}
+
+/* ══ LEFT PANEL ══ */
+.lpanel{
+  width:314px;flex-shrink:0;background:var(--panel);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:width 0.38s cubic-bezier(.4,0,.2,1);
+  position:relative;z-index:200;
+}
+.lpanel.slim{width:0}
+.lp-tog{
+  position:absolute;right:-14px;top:50%;transform:translateY(-50%);
+  width:14px;height:52px;background:var(--forest);
+  border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.55rem;color:var(--muted);cursor:pointer;z-index:300;transition:color 0.2s;
+}
+.lp-tog:hover{color:var(--gold2)}
+.lp-pane{display:none;flex:1;flex-direction:column;overflow:hidden}
+.lp-pane.on{display:flex;animation:slideIn 0.32s ease both}
+
+/* Panel header */
+.lp-hd{
+  padding:1rem 1.2rem 0.8rem;border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(201,145,14,0.08),transparent);
+  flex-shrink:0;position:relative;overflow:hidden;
+}
+.lp-hd::after{content:'✦';position:absolute;top:6px;right:12px;font-size:2rem;color:var(--gold);opacity:0.1;animation:sway 5s ease infinite}
+.lp-eye{font-size:0.57rem;letter-spacing:3.5px;text-transform:uppercase;color:var(--terr2);margin-bottom:4px}
+.lp-title{font-family:var(--serif);font-size:1.2rem;font-weight:700;color:var(--cream);line-height:1.2}
+.lp-desc{font-size:0.68rem;color:var(--muted);margin-top:5px;line-height:1.55}
+.lp-scroll{flex:1;overflow-y:auto;padding:0.7rem}
+
+/* KPIs */
+.kgrid{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.65rem}
+.kc{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:0.72rem;cursor:pointer;
+  transition:all 0.3s;position:relative;overflow:hidden;
+  animation:fadeUp 0.4s ease both;
+}
+.kc::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%}
+.kc.g::before{background:var(--gold)} .kc.t::before{background:var(--teal2)} .kc.r::before{background:var(--terr)} .kc.s::before{background:var(--sage)}
+.kc:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,145,14,0.15)}
+.kn{font-family:var(--serif);font-size:1.6rem;font-weight:700;line-height:1}
+.kc.g .kn{color:var(--gold2)} .kc.t .kn{color:var(--teal2)} .kc.r .kn{color:var(--terr2)} .kc.s .kn{color:var(--sage)}
+.kl{font-size:0.63rem;color:var(--muted);margin-top:3px;line-height:1.3}
+.ktag{display:inline-block;font-size:0.57rem;font-weight:600;margin-top:5px;padding:1px 6px;border-radius:3px}
+.ktag.up{background:rgba(123,174,104,0.15);color:var(--sage);border:1px solid rgba(123,174,104,0.3)}
+.ktag.hot{background:rgba(196,98,45,0.15);color:var(--terr2);border:1px solid rgba(196,98,45,0.3)}
+
+/* Chart blocks */
+.cblk{background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:0.75rem;margin-bottom:0.58rem;animation:fadeUp 0.45s ease both}
+.cttl{font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:0.6rem;display:flex;align-items:center;gap:7px}
+.cttl::before{content:'';width:12px;height:1px;background:var(--terr2)}
+
+/* Opp cards */
+.opc{
+  background:linear-gradient(135deg,rgba(201,145,14,0.07),rgba(28,46,22,0.85));
+  border:1px solid var(--border);border-radius:8px;padding:0.75rem;
+  margin-bottom:0.48rem;cursor:pointer;transition:all 0.28s;animation:fadeUp 0.5s ease both;
+}
+.opc:hover{border-color:var(--gold2);transform:translateX(3px);box-shadow:0 6px 22px rgba(201,145,14,0.12)}
+.opt{display:flex;align-items:flex-start;gap:8px;margin-bottom:4px}
+.opi{font-size:1.25rem;flex-shrink:0}
+.opn{font-family:var(--serif);font-size:0.93rem;font-weight:700;color:var(--cream);flex:1;line-height:1.25}
+.opr{font-size:0.62rem;font-weight:700;color:var(--sage);background:rgba(123,174,104,0.1);border:1px solid rgba(123,174,104,0.25);padding:2px 7px;border-radius:4px;white-space:nowrap}
+.opd{font-size:0.68rem;color:var(--muted);line-height:1.55}
+.oprmk{margin-top:6px;padding:5px 8px;background:rgba(196,98,45,0.1);border-left:2px solid var(--terr2);border-radius:0 4px 4px 0;font-size:0.63rem;color:rgba(232,220,192,0.62);line-height:1.5;font-style:italic}
+
+/* Tourist panel */
+.rec-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:0.55rem}
+.rbadge{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:20px;font-size:0.62rem;font-weight:600;cursor:pointer;transition:all 0.2s;border:1px solid transparent}
+.rbadge.unesc{background:rgba(38,122,106,0.12);color:var(--teal2);border-color:rgba(38,122,106,0.3)}
+.rbadge.geop{background:rgba(123,174,104,0.12);color:var(--sage);border-color:rgba(123,174,104,0.3)}
+.rbadge.herit{background:rgba(201,145,14,0.1);color:var(--gold2);border-color:rgba(201,145,14,0.3)}
+.rbadge:hover{transform:scale(1.04)}
+
+.frow{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:0.62rem}
+.fchip{padding:0.28rem 0.7rem;border-radius:20px;font-size:0.63rem;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all 0.22s;white-space:nowrap}
+.fchip.on{font-weight:700}
+
+.sgrid{display:flex;flex-direction:column;gap:0.52rem}
+.scard{
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:10px;overflow:hidden;cursor:pointer;
+  transition:all 0.3s;animation:fadeUp 0.45s ease both;
+}
+.scard:hover{border-color:var(--teal2);transform:translateY(-3px);box-shadow:0 10px 32px rgba(38,122,106,0.15)}
+.simg{height:100px;position:relative;overflow:hidden}
+.simg img{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.6s,transform 0.7s}
+.simg img.vis{opacity:1}
+.scard:hover .simg img{transform:scale(1.06)}
+.sib{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2.8rem}
+.stagw{position:absolute;top:7px;left:7px;display:flex;gap:4px;flex-wrap:wrap;max-width:95%}
+.stag{font-size:0.56rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:3px;backdrop-filter:blur(6px);white-space:nowrap}
+.stag.ct{background:rgba(22,36,14,0.88);color:var(--gold2);border:1px solid rgba(201,145,14,0.4)}
+.stag.rc{background:rgba(38,122,106,0.88);color:#fff;border:1px solid rgba(53,160,142,0.4)}
+.stag.rm{background:rgba(196,98,45,0.88);color:#fff;border:1px solid rgba(212,120,64,0.4)}
+.sbdy{padding:0.58rem 0.78rem}
+.styp{font-size:0.57rem;letter-spacing:2px;text-transform:uppercase;color:var(--teal2);margin-bottom:2px}
+.snm{font-family:var(--serif);font-size:0.92rem;font-weight:700;color:var(--cream);line-height:1.2}
+.sdesc{font-size:0.63rem;color:var(--muted);margin-top:2px;line-height:1.45}
+.srcg{margin-top:6px;display:flex;align-items:flex-start;gap:5px;background:rgba(38,122,106,0.1);border:1px solid rgba(38,122,106,0.2);border-radius:5px;padding:4px 7px}
+.srcgi{font-size:0.85rem;flex-shrink:0}
+.srcgt{font-size:0.62rem;color:rgba(53,160,142,0.9);line-height:1.4}
+.srmk{margin-top:5px;font-size:0.61rem;color:rgba(232,220,192,0.52);border-left:2px solid var(--terr2);padding-left:7px;line-height:1.45;font-style:italic}
+
+/* Layer control */
+.swrp{padding:0.55rem 0.65rem;border-bottom:1px solid var(--border);position:relative}
+.sfld{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:7px;padding:0.44rem 0.85rem 0.44rem 2.1rem;color:var(--cream);font-family:var(--body);font-size:0.76rem;outline:none;transition:border-color 0.2s}
+.sfld:focus{border-color:var(--gold)} .sfld::placeholder{color:var(--muted)}
+.sico{position:absolute;left:1.32rem;top:50%;transform:translateY(-50%);font-size:0.82rem;pointer-events:none}
+.lgwrp{padding:0.5rem 0;flex:1;overflow-y:auto}
+.lgg{margin-bottom:2px}
+.lgh{display:flex;align-items:center;gap:7px;padding:0.47rem 0.75rem;border-radius:6px;font-size:0.62rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:background 0.2s;user-select:none}
+.lgh:hover{background:rgba(255,255,255,0.04)}
+.lga{margin-left:auto;font-size:0.55rem;transition:transform 0.25s}
+.lgh.shut .lga{transform:rotate(-90deg)}
+.lgi{padding-left:4px}
+.lgi-row{display:flex;align-items:center;gap:7px;padding:0.4rem 0.75rem;border-radius:6px;cursor:pointer;transition:background 0.2s}
+.lgi-row:hover{background:rgba(255,255,255,0.04)}
+.lgdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;transition:opacity 0.2s}
+.lgnm{font-size:0.74rem;flex:1}
+.lgcnt{font-size:0.6rem;color:var(--muted);background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px}
+.lgtog{width:30px;height:17px;background:rgba(255,255,255,0.1);border-radius:9px;position:relative;flex-shrink:0;transition:background 0.25s}
+.lgtog.on{background:var(--gold)} .lgtog::after{content:'';position:absolute;top:2.5px;left:2.5px;width:12px;height:12px;background:#fff;border-radius:50%;transition:left 0.25s}
+.lgtog.on::after{left:15.5px}
+.bmbar{padding:0.62rem 0.75rem;border-top:1px solid var(--border);flex-shrink:0}
+.bmbar label{font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.4rem}
+.bmbts{display:flex;gap:5px;flex-wrap:wrap}
+.bmbtn{font-size:0.64rem;padding:0.3rem 0.65rem;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;transition:all 0.2s}
+.bmbtn.on,.bmbtn:hover{background:var(--terr);color:var(--cream);border-color:var(--terr);font-weight:600}
+
+/* ══ MAP ══ */
+.mwrap{flex:1;position:relative;overflow:hidden}
+#map{width:100%;height:100%}
+.mwrap::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:400;background:radial-gradient(ellipse at center,transparent 52%,rgba(22,36,15,0.42) 100%)}
+.mwrap::after{content:'';position:absolute;bottom:0;left:0;right:0;height:80px;background:linear-gradient(to top,rgba(22,36,15,0.65),transparent);pointer-events:none;z-index:400}
+
+/* Floating search */
+.msrch{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:1000;width:360px}
+.msrch input{width:100%;background:rgba(14,22,8,0.93);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:9px;padding:0.72rem 1.1rem 0.72rem 2.6rem;color:var(--cream);font-family:var(--body);font-size:0.82rem;outline:none;box-shadow:0 4px 28px rgba(0,0,0,0.55);transition:border-color 0.25s,box-shadow 0.25s}
+.msrch input:focus{border-color:var(--gold);box-shadow:0 4px 28px rgba(0,0,0,0.55),0 0 0 3px rgba(201,145,14,0.1)}
+.msrch input::placeholder{color:var(--muted)}
+.msrico{position:absolute;left:0.85rem;top:50%;transform:translateY(-50%);font-size:0.88rem}
+
+/* Legend */
+.mleg{position:absolute;bottom:22px;right:16px;z-index:1000;background:rgba(14,22,8,0.94);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:11px;padding:0.88rem 1.05rem;min-width:195px;box-shadow:0 12px 40px rgba(0,0,0,0.6)}
+.legtt{font-family:var(--serif);font-size:0.87rem;font-weight:700;color:var(--gold2);margin-bottom:0.65rem;display:flex;align-items:center;gap:7px}
+.legtt::before{content:'✦';font-size:0.7rem;color:var(--terr2)}
+.legrow{display:flex;align-items:center;gap:8px;margin-bottom:5px;cursor:pointer;transition:opacity 0.2s}
+.legrow:hover{opacity:0.72}
+.legdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.leglbl{font-size:0.68rem;color:rgba(232,220,192,0.7)}
+
+/* Coord bar */
+.cbar{position:absolute;bottom:0;left:0;right:0;z-index:600;background:rgba(14,22,8,0.9);backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:3px 14px;font-size:0.6rem;font-family:'Courier New',monospace;color:var(--muted);display:flex;gap:2rem;align-items:center}
+.clive{color:var(--gold2)}
+
+/* Loader */
+.mloader{position:absolute;inset:0;z-index:2000;background:var(--java);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;transition:opacity 0.8s}
+.mloader.done{opacity:0;pointer-events:none}
+.mring{width:44px;height:44px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.9s linear infinite}
+.mltit{font-family:var(--serif);font-size:1.2rem;font-weight:700;color:var(--gold2);letter-spacing:3px}
+.mlsub{font-size:0.58rem;letter-spacing:3.5px;text-transform:uppercase;color:var(--sage)}
+
+/* ══ LEAFLET POPUP ══ */
+.leaflet-popup-content-wrapper{
+  background:rgba(10,18,6,0.97)!important;border:1px solid rgba(201,145,14,0.38)!important;
+  border-radius:11px!important;color:var(--text)!important;
+  box-shadow:0 16px 50px rgba(0,0,0,0.75),0 0 0 1px rgba(201,145,14,0.06)!important;
+  backdrop-filter:blur(24px)!important;
+}
+.leaflet-popup-tip{background:rgba(10,18,6,0.97)!important}
+.leaflet-popup-content{margin:13px 17px!important;min-width:195px!important}
+.pem{font-size:2.1rem;display:block;margin-bottom:6px}
+.ptt{font-family:var(--serif);font-size:1.08rem;font-weight:700;color:var(--gold2);line-height:1.2}
+.pcat{font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--teal2);margin:2px 0 7px}
+.psep{height:1px;background:var(--border);margin:7px 0}
+.ptyp{font-size:0.64rem;color:var(--sage);font-style:italic;margin-bottom:4px}
+.pdesc{font-size:0.72rem;color:rgba(232,220,192,0.65);line-height:1.6}
+.precog{display:flex;align-items:flex-start;gap:5px;margin-top:8px;background:rgba(38,122,106,0.1);border:1px solid rgba(38,122,106,0.25);border-radius:5px;padding:5px 8px}
+.precog span:first-child{flex-shrink:0;font-size:0.9rem}
+.precog-t{font-size:0.64rem;color:rgba(53,160,142,0.92);line-height:1.45}
+.prmk{margin-top:6px;font-size:0.62rem;color:rgba(232,220,192,0.5);border-left:2px solid var(--terr2);padding-left:7px;line-height:1.5;font-style:italic}
+.pbadge{display:inline-flex;align-items:center;gap:4px;margin-top:7px;font-size:0.62rem;font-weight:700;padding:3px 8px;border-radius:4px}
+.pbadge.inv{background:rgba(123,174,104,0.12);color:var(--sage);border:1px solid rgba(123,174,104,0.28)}
+.pbadge.tour{background:rgba(38,122,106,0.1);color:var(--teal2);border:1px solid rgba(38,122,106,0.25)}
+.pcoords{font-size:0.57rem;color:rgba(232,220,192,0.25);font-family:'Courier New',monospace;margin-top:7px}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="tb-brand">
+    <div class="tb-brand-title">MY–TH BEZ</div>
+    <div class="tb-brand-sub">NCER GIS</div>
+  </div>
+  <div class="tb-nav">
+    <button class="tb-btn active" id="btn-investor" onclick="setMode('investor')"><span class="bi">💼</span>Investor</button>
+    <button class="tb-btn" id="btn-tourist" onclick="setMode('tourist')"><span class="bi">🌺</span>Tourism</button>
+    <div class="tb-div"></div>
+    <button class="tb-btn" id="btn-layers" onclick="setMode('layers')"><span class="bi">🗂</span>Layers</button>
+  </div>
+  <div class="tb-right">
+    <div class="tb-stat"><div class="tb-sv">RM 6.1B</div><div class="tb-sl">Tourism Revenue</div></div>
+    <div class="tb-stat"><div class="tb-sv">18.2M</div><div class="tb-sl">Annual Visitors</div></div>
+    <div class="tb-stat"><div class="tb-sv">117</div><div class="tb-sl">GIS Features</div></div>
+    <div class="tb-stat"><div class="tb-sv">4</div><div class="tb-sl">UNESCO Sites</div></div>
+    <div class="tb-live"><div class="tb-ld"></div>Live GIS</div>
+  </div>
+</div>
+
+<div class="shell">
+  <!-- LEFT PANEL -->
+  <div class="lpanel" id="lpanel">
+    <div class="lp-tog" id="lptog" onclick="togglePanel()">◀</div>
+
+    <!-- INVESTOR PANE -->
+    <div class="lp-pane on" id="pane-investor">
+      <div class="lp-hd">
+        <div class="lp-eye">Economic Corridor Intelligence</div>
+        <div class="lp-title">Investor Dashboard</div>
+        <div class="lp-desc">Industrial zones, border nodes &amp; prime investment opportunities across the MY–TH economic corridor.</div>
+      </div>
+      <div class="lp-scroll">
+        <div class="kgrid">
+          <div class="kc g" onclick="flyGroup('border_crossing')" style="animation-delay:.05s"><div class="kn">17</div><div class="kl">Border Crossings</div><div class="ktag hot">🔥 Active</div></div>
+          <div class="kc t" onclick="flyGroup('industrial')" style="animation-delay:.1s"><div class="kn">25</div><div class="kl">Industrial Parks</div><div class="ktag up">↑ +3 Planned</div></div>
+          <div class="kc r" onclick="flyGroup('port')" style="animation-delay:.15s"><div class="kn">14</div><div class="kl">Ports & Airports</div><div class="ktag up">↑ Expanding</div></div>
+          <div class="kc s" onclick="flyGroup('university')" style="animation-delay:.2s"><div class="kn">18</div><div class="kl">Universities / HLI</div><div class="ktag up">↑ Talent Hub</div></div>
+        </div>
+
+        <div class="cblk" style="animation-delay:.25s">
+          <div class="cttl">Feature Distribution</div>
+          <div style="position:relative;height:145px"><canvas id="donutChart"></canvas></div>
+        </div>
+        <div class="cblk" style="animation-delay:.3s">
+          <div class="cttl">Visitor Trend 2019–2024 (Millions)</div>
+          <div style="position:relative;height:105px"><canvas id="lineChart"></canvas></div>
+        </div>
+        <div class="cblk" style="animation-delay:.35s">
+          <div class="cttl">Industrial Zones by Region</div>
+          <div style="position:relative;height:105px"><canvas id="barChart"></canvas></div>
+        </div>
+
+        <div class="cttl" style="margin:.45rem 0 .55rem">💡 Investment Opportunities</div>
+
+        <div class="opc" onclick="flyCoords(6.225,102.117)" style="animation-delay:.4s">
+          <div class="opt"><span class="opi">🌊</span><span class="opn">Geting Integrated Tourism Zone</span><span class="opr">18–30%</span></div>
+          <div class="opd">Govt-backed coastal resort, Pantai Geting, Tumpat, Kelantan. First-mover advantage.</div>
+          <div class="oprmk">🔨 Under implementation — expected completion September 2026.</div>
+        </div>
+        <div class="opc" onclick="flyCoords(6.017,101.973)" style="animation-delay:.44s">
+          <div class="opt"><span class="opi">🛍️</span><span class="opn">Rantau Panjang Duty-Free Retail</span><span class="opr">15–25%</span></div>
+          <div class="opd">5M+ annual shoppers. Cross-border demand for retail, F&amp;B and hospitality.</div>
+        </div>
+        <div class="opc" onclick="flyCoords(6.483,100.419)" style="animation-delay:.48s">
+          <div class="opt"><span class="opi">🏭</span><span class="opn">Bukit Kayu Hitam SBEZ</span><span class="opr">12–18%</span></div>
+          <div class="opd">Delapan + KSTP cluster. Halal mfg, rubber &amp; E&amp;E. Direct Thai border connectivity.</div>
+        </div>
+        <div class="opc" onclick="flyCoords(5.675,101.399)" style="animation-delay:.52s">
+          <div class="opt"><span class="opi">🌲</span><span class="opn">Royal Belum Eco-Resort</span><span class="opr">12–18%</span></div>
+          <div class="opd">130M-year-old UNESCO-proposed rainforest. Untapped luxury eco-lodge potential.</div>
+        </div>
+        <div class="opc" onclick="flyCoords(5.464,101.798)" style="animation-delay:.56s">
+          <div class="opt"><span class="opi">🏔️</span><span class="opn">Gunung Stong National Geopark</span><span class="opr">10–16%</span></div>
+          <div class="opd">KeTSA National Geopark, Kelantan. Adventure tourism &amp; eco-lodge plays.</div>
+        </div>
+        <div class="opc" onclick="flyCoords(6.154,102.231)" style="animation-delay:.6s">
+          <div class="opt"><span class="opi">🏺</span><span class="opn">Laman Warisan Kampung Laut</span><span class="opr">8–14%</span></div>
+          <div class="opd">Pending Warisan Negeri gazettement. Cultural tourism &amp; heritage hospitality.</div>
+          <div class="oprmk">📋 Approved for Warisan Negeri listing (JWN 2025) — gazettement pending.</div>
+        </div>
+        <div class="opc" onclick="flyCoords(6.051,102.233)" style="animation-delay:.64s">
+          <div class="opt"><span class="opi">🚆</span><span class="opn">ECRL Kota Bharu Transit Hub</span><span class="opr">10–14%</span></div>
+          <div class="opd">ECRL northern terminus. Logistics, warehousing &amp; transit-oriented development.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOURIST PANE -->
+    <div class="lp-pane" id="pane-tourist">
+      <div class="lp-hd">
+        <div class="lp-title">Tourism Guide</div>
+        <div class="lp-desc">UNESCO sites, National Geoparks, heritage villages, duty-free zones &amp; coastal paradises.</div>
+      </div>
+      <div class="lp-scroll">
+        <div class="rec-row">
+          <div class="rbadge unesc" onclick="filterSpots('rec','UNESCO')">🏛 UNESCO (4)</div>
+          <div class="rbadge geop" onclick="filterSpots('rec','Geopark')">🌋 Geopark (3)</div>
+          <div class="rbadge herit" onclick="filterSpots('rec','Heritage')">🏺 Heritage (2)</div>
+          <div class="rbadge" style="background:rgba(196,98,45,0.1);color:var(--terr2);border-color:rgba(196,98,45,0.3)" onclick="filterSpots('rec','Under Construction')">🔨 Active (1)</div>
+        </div>
+        <div class="frow" id="tourFilters"></div>
+        <div class="sgrid" id="tourGrid"></div>
+      </div>
+    </div>
+
+    <!-- LAYERS PANE -->
+    <div class="lp-pane" id="pane-layers">
+      <div class="lp-hd">
+        <div class="lp-eye">Spatial Data</div>
+        <div class="lp-title">Layer Control</div>
+        <div class="lp-desc">Toggle categories, filter features, switch basemaps.</div>
+      </div>
+      <div class="swrp">
+        <span class="sico">🔍</span>
+        <input class="sfld" id="lyrSrch" placeholder="Search layers or features…">
+      </div>
+      <div class="lgwrp" id="lyrGrps"></div>
+      <div class="bmbar">
+        <label>Basemap</label>
+        <div class="bmbts">
+          <button class="bmbtn on" onclick="setBasemap('osm',this)">OSM</button>
+          <button class="bmbtn" onclick="setBasemap('satellite',this)">Satellite</button>
+          <button class="bmbtn" onclick="setBasemap('dark',this)">Dark</button>
+          <button class="bmbtn" onclick="setBasemap('topo',this)">Topo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="mwrap">
+    <div class="mloader" id="mloader">
+      <div class="mring"></div>
+      <div class="mltit">MY–TH BEZ</div>
+      <div class="mlsub">Loading 117 spatial features…</div>
+    </div>
+    <div id="map"></div>
+    <div class="msrch">
+      <span class="msrico">🔍</span>
+      <input type="text" id="mapSrch" placeholder="Search locations, Geoparks, industrial zones, UNESCO sites…">
+    </div>
+    <div class="mleg" id="mleg">
+      <div class="legtt">Map Layers</div>
+      <div id="legBody"></div>
+    </div>
+    <div class="cbar">
+      <span>📍 <span class="clive" id="coordLive">Hover for coordinates</span></span>
+      <span>CRS: WGS84 / EPSG:4326</span>
+      <span><span id="visCount">117</span> features visible</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════
+   117 FEATURES — 111 original + 6 new from KML/Excel
+   Fields: n=name, d=description, c=category (port/airport/railway/industrial/university/border_crossing/shopping/tourism/nature)
+   lat/lng, type=tourism type, recog=recognition, remark=project note, img=real image URL
+══════════════════════════════════════ */
+const F=[
+  /* PORTS */
+  {n:"Songkhla Deep Sea Port",d:"Major deep-sea port, Thailand's southern trade backbone.",c:"port",lat:7.2291,lng:100.5713,img:"https://images.unsplash.com/photo-1564768753539-3b945fd3ad41?w=600&q=75"},
+  {n:"Jeti Kuala Perlis",d:"Ferry terminal linking mainland Perlis to Langkawi.",c:"port",lat:6.3983,lng:100.1281,img:"https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&q=75"},
+  {n:"Kuah Jetty, Langkawi",d:"Main arrival jetty for Langkawi visitors. Gateway to UNESCO Geopark.",c:"port",lat:6.3061,lng:99.8515,img:"https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&q=75"},
+  {n:"Kuala Kedah Ferry Terminal",d:"Ferry terminal with daily services to Langkawi island.",c:"port",lat:6.1064,lng:100.2902},
+  {n:"Pelabuhan Sanglang Perlis",d:"Proposed private port development – MPSB, Perlis.",c:"port",lat:6.2722,lng:100.1787},
+  {n:"Penang Port",d:"International shipping hub, George Town, Penang.",c:"port",lat:5.4200,lng:100.3615,img:"https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&q=75"},
+  {n:"Tammalang Pier",d:"Ferry pier serving Satun province, Thailand.",c:"port",lat:6.5338,lng:100.0693},
+  {n:"Pelabuhan Tok Bali",d:"Commercial fishing port, Kelantan east coast.",c:"port",lat:5.8939,lng:102.4867},
+  {n:"Teluk Ewa Port",d:"Cargo port facility, northern Langkawi.",c:"port",lat:6.4227,lng:99.7638},
+  {n:"Langkawi Port",d:"Main ferry and cargo port, Langkawi island.",c:"port",lat:6.2923,lng:99.7866,img:"https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=600&q=75"},
+  /* AIRPORTS */
+  {n:"Langkawi International Airport",d:"Gateway to UNESCO Global Geopark — Kilim, Dayang Bunting & Machinchang geoforests.",c:"airport",lat:6.3424,lng:99.7311,type:"Gateway",recog:"UNESCO Global Geopark – Kilim, Dayang Bunting & Machinchang",img:"https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=75"},
+  {n:"Sultan Abdul Halim Airport",d:"Regional airport serving Alor Setar, Kedah.",c:"airport",lat:6.1918,lng:100.3952,img:"https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=75"},
+  {n:"Penang International Airport",d:"UNESCO World Heritage city's main international gateway.",c:"airport",lat:5.2928,lng:100.2659,type:"Gateway",recog:"UNESCO World Heritage Site – George Town, Penang",img:"https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=75"},
+  {n:"Hat Yai International Airport",d:"Thailand's premier southern aviation hub.",c:"airport",lat:6.9367,lng:100.3937,img:"https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=75"},
+  {n:"Kota Bharu Sultan Ismail Petra Airport",d:"Gateway to Kelantan — Malaysia's cultural heartland.",c:"airport",lat:6.1667,lng:102.2957,img:"https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=75"},
+  {n:"Betong International Airport",d:"New international airport, Yala, southern Thailand.",c:"airport",lat:5.7860,lng:101.1475,img:"https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=75"},
+  /* RAILWAY */
+  {n:"ECRL Kota Bharu Station",d:"East Coast Rail Link — strategic northern terminus connecting east–west Malaysia.",c:"railway",lat:6.0513,lng:102.2327},
+  {n:"Stesen Keretapi Rantau Panjang",d:"Historical cross-border rail station, Kelantan–Narathiwat.",c:"railway",lat:6.0216,lng:101.9766},
+  {n:"Stesen KTMB Pasir Mas",d:"Intercity rail station, Kelantan.",c:"railway",lat:6.0425,lng:102.1424},
+  {n:"Sungai Kolok SRT Station",d:"Thailand State Railway cross-border station, Sungai Kolok.",c:"railway",lat:6.0257,lng:101.963},
+  {n:"KTM Stesen Pdg. Besar",d:"Cross-border KTM intercity station, Perlis–Songkhla.",c:"railway",lat:6.6622,lng:100.3195},
+  {n:"Padang Besar Railway Station (TH)",d:"SRT cross-border station, Thailand side.",c:"railway",lat:6.6689,lng:100.3244},
+  {n:"Perlis Inland Port (PIP)",d:"Inland container depot, Padang Besar — rail-road integration hub.",c:"railway",lat:6.6338,lng:100.2990},
+  {n:"ECRL Pasir Puteh Station",d:"East Coast Rail Link — Pasir Puteh stop, Kelantan.",c:"railway",lat:5.8062,lng:102.3682},
+  /* INDUSTRIAL */
+  {n:"Southern Industrial Estate Songkhla",d:"Major industrial zone, Songkhla province, Thailand.",c:"industrial",lat:7.0081,lng:100.3598},
+  {n:"Pentas Industrial Area @ Delapan",d:"Industrial cluster in BKH SBEZ, Kedah.",c:"industrial",lat:6.5108,lng:100.4454},
+  {n:"BKH Industrial Park",d:"Bukit Kayu Hitam industrial park, Kedah.",c:"industrial",lat:6.4838,lng:100.4192},
+  {n:"BKH ICD @ Delapan",d:"Inland Container Depot, Delapan corridor, Kedah.",c:"industrial",lat:6.5093,lng:100.4254},
+  {n:"NCT Industrial Park @ Delapan",d:"Industrial park, Delapan zone, Kedah.",c:"industrial",lat:6.5027,lng:100.4298},
+  {n:"Songkhla Industrial Estate – Sadao",d:"Thai industrial estate adjacent to MY border, Sadao.",c:"industrial",lat:6.5417,lng:100.4135},
+  {n:"Songkhla Rubber City",d:"Major rubber processing complex, Hat Yai, Songkhla.",c:"industrial",lat:7.0036,lng:100.3649},
+  {n:"Pattani Halal Food Industrial Estate",d:"Halal food processing hub, Pattani, Thailand.",c:"industrial",lat:6.7788,lng:101.5843},
+  {n:"Halal Park Kuala Perlis",d:"Halal manufacturing park, Perlis.",c:"industrial",lat:6.3898,lng:100.1404},
+  {n:"Pasir Mas Halal Park",d:"Halal industrial park, Kelantan.",c:"industrial",lat:5.9984,lng:102.0563},
+  {n:"Mara Industrial Area, Pengkalan Chepa",d:"MARA industrial zone near Kota Bharu, Kelantan.",c:"industrial",lat:6.1430,lng:102.3022},
+  {n:"Pdg. Besar Industrial Area",d:"Industrial cluster at border crossing zone, Padang Besar.",c:"industrial",lat:6.6569,lng:100.3059},
+  {n:"Halal Park Padang Besar",d:"Halal industrial park, Padang Besar.",c:"industrial",lat:6.6472,lng:100.3144},
+  {n:"Top Glove Medical (Thailand)",d:"Medical gloves manufacturing, Thailand.",c:"industrial",lat:6.5798,lng:100.4122},
+  {n:"Tavorn Rubber Industry",d:"Rubber processing company, Sadao area.",c:"industrial",lat:6.6534,lng:100.4301},
+  {n:"Safeskin Medical & Scientific (TH)",d:"Medical device manufacturing, Thailand.",c:"industrial",lat:6.6638,lng:100.4325},
+  {n:"Wa Thai Rubber Company",d:"Rubber product manufacturer, Songkhla.",c:"industrial",lat:6.7700,lng:100.4566},
+  {n:"KHTP – Kulim Hi-Tech Park",d:"High-tech industrial park, Kulim, Kedah.",c:"industrial",lat:5.4232,lng:100.5834},
+  {n:"Karangan Industrial Area",d:"Industrial area, Kulim, Kedah.",c:"industrial",lat:5.4916,lng:100.6049},
+  {n:"Chotiwat Manufacturing",d:"Food manufacturing facility, Songkhla.",c:"industrial",lat:6.9728,lng:100.4922},
+  {n:"Tropical Canning (Thailand)",d:"Canned food processing, Songkhla.",c:"industrial",lat:7.0650,lng:100.5387},
+  {n:"CPF (Thailand) Public Company",d:"Agribusiness & food conglomerate, Songkhla.",c:"industrial",lat:7.0821,lng:100.5535},
+  {n:"Man A Frozen Foods",d:"Frozen seafood processing, Songkhla.",c:"industrial",lat:7.1610,lng:100.6323},
+  {n:"Pacific Seafood Processing",d:"Seafood export company, Songkhla.",c:"industrial",lat:7.1473,lng:100.6416},
+  {n:"Sri Trang Gloves (Thailand)",d:"World's largest rubber glove manufacturer — Thailand facility.",c:"industrial",lat:6.6082,lng:100.3838},
+  /* UNIVERSITIES */
+  {n:"Universiti Utara Malaysia",d:"Premier management university, Sintok, Kedah.",c:"university",lat:6.4485,lng:100.5097},
+  {n:"Universiti Malaysia Perlis (UniMAP)",d:"Engineering & technology university, Perlis.",c:"university",lat:6.4604,lng:100.3518},
+  {n:"Prince of Songkla University",d:"Thailand's premier southern university, Hat Yai.",c:"university",lat:7.0069,lng:100.5007},
+  {n:"Albukhary International University",d:"International university, Alor Setar, Kedah.",c:"university",lat:6.1336,lng:100.3864},
+  {n:"Princess of Naradhiwas University",d:"Public university, Narathiwat, Thailand.",c:"university",lat:6.4382,lng:101.7870},
+  {n:"Prince of Songkla Univ. Pattani",d:"PSU Pattani campus, southern Thailand.",c:"university",lat:6.8775,lng:101.2368},
+  {n:"Thaksin University",d:"Public university, Phatthalung/Songkhla.",c:"university",lat:7.1621,lng:100.6081},
+  {n:"Songkhla Rajabhat University",d:"Regional university, Songkhla.",c:"university",lat:7.1714,lng:100.6137},
+  {n:"Rajamangala Univ. Tech. Srivijaya",d:"Technical university, Songkhla, Thailand.",c:"university",lat:7.2012,lng:100.6000},
+  {n:"Fatoni University",d:"Private Islamic university, Pattani.",c:"university",lat:6.5987,lng:101.3435},
+  {n:"Thailand Nat'l Sports Univ. Yala",d:"Sports science university, Yala.",c:"university",lat:6.5526,lng:101.2921},
+  {n:"Yala Rajabhat University",d:"Regional university, Yala province.",c:"university",lat:6.5488,lng:101.2897},
+  {n:"Ramkhamhaeng Univ. Songkhla",d:"Open distance learning campus, Songkhla.",c:"university",lat:6.9410,lng:100.4295},
+  {n:"Hatyai University",d:"Private university, Hat Yai.",c:"university",lat:6.9802,lng:100.4660},
+  {n:"Songkhla Rajabhat – Satun Campus",d:"Satun branch campus.",c:"university",lat:6.8639,lng:99.8109},
+  {n:"Tinsulanonda Fisheries College",d:"Fisheries vocational college, Songkhla.",c:"university",lat:7.1474,lng:100.5663},
+  {n:"Boromrajonani Nursing College",d:"Nursing college, Songkhla.",c:"university",lat:7.1434,lng:100.5645},
+  {n:"Kolej Pertanian Malaysia",d:"Agricultural college, Kedah.",c:"university",lat:6.4987,lng:100.4767},
+  /* BORDER CROSSINGS */
+  {n:"Kompleks ICQS Pengkalan Kubor",d:"Immigration & customs, Tumpat–Takbai border, Kelantan.",c:"border_crossing",lat:6.2329,lng:102.0910},
+  {n:"Takbai Border Checkpoint",d:"Thai immigration, Takbai, Narathiwat side.",c:"border_crossing",lat:6.2371,lng:102.0903},
+  {n:"ICQS Rantau Panjang",d:"Malaysia's busiest cross-border checkpoint — 5M+ annual crossings.",c:"border_crossing",lat:6.0213,lng:101.9763},
+  {n:"Sungai Kolok Border Checkpoint",d:"Thai-side border crossing, Sungai Kolok, Narathiwat.",c:"border_crossing",lat:6.0242,lng:101.9731},
+  {n:"ICQS Bukit Bunga",d:"Cross-border checkpoint, Bukit Bunga, Kelantan.",c:"border_crossing",lat:5.8380,lng:101.8945},
+  {n:"Buketa Border Checkpoint",d:"Thai immigration checkpoint, Narathiwat province.",c:"border_crossing",lat:5.8414,lng:101.8879},
+  {n:"ICQS B. Berapit, Perak",d:"Border crossing, Perak–Betong corridor.",c:"border_crossing",lat:5.7456,lng:101.0241},
+  {n:"Betong Border Checkpoint",d:"Thai immigration, Betong, Yala province.",c:"border_crossing",lat:5.7480,lng:101.0298},
+  {n:"ICQS Pdg. Besar",d:"Major rail & road border crossing, Padang Besar, Perlis.",c:"border_crossing",lat:6.6639,lng:100.3228},
+  {n:"Padang Besar Customs House",d:"Thai customs complex, Sadao, Songkhla.",c:"border_crossing",lat:6.6649,lng:100.3275},
+  {n:"ICQS Wang Kelian",d:"Scenic mountain border crossing, Wang Kelian, Perlis.",c:"border_crossing",lat:6.6963,lng:100.1794},
+  {n:"Wang Prachan Boundary Post",d:"Thai boundary post, Satun province.",c:"border_crossing",lat:6.6968,lng:100.1783},
+  {n:"ICQS BKH",d:"Bukit Kayu Hitam border complex, Kedah.",c:"border_crossing",lat:6.5131,lng:100.4215},
+  {n:"Sadao Border Checkpoint Complex",d:"Major MY–TH crossing, Sadao, Songkhla.",c:"border_crossing",lat:6.5264,lng:100.4306},
+  {n:"Sadao Border Checkpoint (current)",d:"Active crossing, Kedah–Sadao, Songkhla.",c:"border_crossing",lat:6.5196,lng:100.4191},
+  {n:"ICQS Kota Putra",d:"Cross-border checkpoint, Kota Putra, Kedah.",c:"border_crossing",lat:6.4690,lng:100.7093},
+  {n:"Ban Prakop Immigration",d:"Thai checkpoint, Kedah–Songkhla border.",c:"border_crossing",lat:6.4717,lng:100.7079},
+  /* SHOPPING */
+  {n:"Pengkalan Kubor Duty Free Zone",d:"Popular duty-free shopping, Tumpat, Kelantan. Cross-border tourism hub.",c:"shopping",lat:6.2328,lng:102.0914,type:"Cross-Border Tourism",img:"https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=600&q=75"},
+  {n:"Rantau Panjang Free Duty Zone",d:"Malaysia's most-visited duty-free zone — over 5 million shoppers annually.",c:"shopping",lat:6.0177,lng:101.9731,type:"Cross-Border Tourism",img:"https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=600&q=75"},
+  {n:"The Zone Duty Free",d:"Modern duty-free mall, Rantau Panjang.",c:"shopping",lat:6.0210,lng:101.9749,type:"Cross-Border Tourism",img:"https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=600&q=75"},
+  {n:"Bazar Siti Fatimah",d:"Traditional Malay cross-border bazaar, Kelantan.",c:"shopping",lat:6.0193,lng:101.9756,type:"Cross-Border Tourism"},
+  {n:"Plaza IMT-GT Bukit Bunga",d:"Cross-border shopping plaza in the IMT-GT economic corridor.",c:"shopping",lat:5.8318,lng:101.8996,type:"Cross-Border Tourism",img:"https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=600&q=75"},
+  {n:"ARKED MARA JELI – Bukit Bunga",d:"MARA retail & rest area, Bukit Bunga, Kelantan.",c:"shopping",lat:5.8349,lng:101.9007},
+  {n:"Emas Kerajang Duty Free",d:"Duty-free jewellery & goods, Padang Besar.",c:"shopping",lat:6.6643,lng:100.3257},
+  {n:"Arked Niaga Padang Besar",d:"Shopping arcade, Padang Besar border town.",c:"shopping",lat:6.6609,lng:100.3244},
+  {n:"Padang Waremart",d:"Hypermarket, Padang Besar.",c:"shopping",lat:6.6622,lng:100.3252},
+  {n:"Plaza Niaga Padang Besar",d:"Commercial plaza, Padang Besar.",c:"shopping",lat:6.6613,lng:100.3251},
+  {n:"Padang Besar Street",d:"Vibrant cross-border shopping street.",c:"shopping",lat:6.6615,lng:100.3259},
+  {n:"Bazar Padang Besar",d:"Lively cross-border market, Padang Besar, Perlis.",c:"shopping",lat:6.6618,lng:100.3242},
+  {n:"Arked Niaga Wang Kelian",d:"Border shopping arcade, Wang Kelian, Perlis.",c:"shopping",lat:6.6970,lng:100.1829},
+  /* TOURISM */
+  {n:"Betong Clock Tower",d:"Iconic historic landmark in Betong city centre, Yala, Thailand.",c:"tourism",lat:5.7718,lng:101.0715,type:"Cultural Tourism",img:"https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=75"},
+  {n:"Betong City Museum",d:"Local heritage museum, Betong, Yala, Thailand.",c:"tourism",lat:5.7698,lng:101.0715,type:"Heritage Tourism"},
+  {n:"Betong Chicken Statue",d:"Famous quirky landmark — most photographed site in Betong.",c:"tourism",lat:5.7683,lng:101.0732,type:"Cultural Tourism"},
+  {n:"Betong Mongkolrit Tunnel",d:"Historic underground guerrilla tunnel, Yala — a unique historical experience.",c:"tourism",lat:5.7684,lng:101.0726,type:"Historical Tourism",img:"https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&q=75"},
+  {n:"Wang Kelian View Point",d:"Breathtaking panoramic mountain viewpoint overlooking the MY–TH border, Perlis.",c:"tourism",lat:6.6657,lng:100.2014,type:"Adventure Tourism",img:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=75"},
+  {n:"Tasik TEMENGOR / Pulau Banding",d:"Stunning highland lake — jungle cruises, hornbills, proximity to Belum rainforest, Perak.",c:"tourism",lat:5.4973,lng:101.3459,type:"Ecotourism",img:"https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=600&q=75"},
+  {n:"Samila Beach",d:"Golden beach with the iconic bronze mermaid statue — Songkhla's most beloved coastal destination.",c:"tourism",lat:7.2152,lng:100.5953,type:"Coastal Tourism",img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=75"},
+  {n:"Songkhla Zoo",d:"Wildlife park and zoo, Songkhla, Thailand.",c:"tourism",lat:7.1431,lng:100.6047,type:"Ecotourism",img:"https://images.unsplash.com/photo-1503256207526-0d5523f31580?w=600&q=75"},
+  {n:"George Town, Penang",d:"Malaysia's UNESCO World Heritage city — colonial architecture, street art, hawker culture.",c:"tourism",lat:5.4141,lng:100.3288,type:"Heritage Tourism",recog:"UNESCO World Heritage Site – George Town, Penang (2008)",img:"https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=600&q=75"},
+  /* NEW: From KML Border Tourism Kelantan */
+  {n:"Geting Integrated Tourism Zone (GITZ)",d:"Coastal tourism megaproject at Pantai Geting, Tumpat, Kelantan. Integrated beach resort & tourism facilities.",c:"tourism",lat:6.2251,lng:102.1165,type:"Coastal Tourism",remark:"Under implementation. Expected completion September 2026.",img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=75"},
+  {n:"Laman Warisan Kampung Laut",d:"Historic Malay heritage village in Kelantan featuring traditional stilt houses and Kelantanese cultural artefacts.",c:"tourism",lat:6.1544,lng:102.2308,type:"Heritage Tourism",recog:"Approved for Warisan Negeri listing by JWN (2025) — official gazettement pending",remark:"Approved for listing as Warisan Negeri (Jabatan Warisan Negara, 2025). Gazettement still pending.",img:"https://images.unsplash.com/photo-1585468274952-66591eb14165?w=600&q=75"},
+  /* NATURE */
+  {n:"Royal Belum Perak State Park",d:"One of the world's oldest rainforests — Rafflesia, elephants, tapirs, Orang Asli culture, Perak.",c:"nature",lat:5.6755,lng:101.3994,type:"Ecotourism – Geopark",recog:"UNESCO – Royal Belum Forest (Proposed World Heritage)",img:"https://images.unsplash.com/photo-1448375240586-882707db888b?w=600&q=75"},
+  {n:"Gua Kelam, Taman Negeri Perlis",d:"Stunning 370m illuminated limestone cave with underground river, Perlis State Park.",c:"nature",lat:6.6437,lng:100.2048,type:"Ecotourism – Caving",recog:"Geosite by Jabatan Mineral & Geosains (JMG) – Gua Kelam",img:"https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&q=75"},
+  {n:"Taman Negeri Perlis",d:"Perlis State Park — limestone karst topography, caves, wildlife.",c:"nature",lat:6.7015,lng:100.2096,type:"Ecotourism",img:"https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=600&q=75"},
+  {n:"Thale Ban National Park",d:"Virgin tropical rainforest national park, Satun, Thailand — waterfalls & wildlife.",c:"nature",lat:6.7104,lng:100.1709,type:"Ecotourism",img:"https://images.unsplash.com/photo-1448375240586-882707db888b?w=600&q=75"},
+  {n:"Mu Ko Phetra National Park",d:"Pristine marine national park — coral reefs, islands, sea turtles, Satun, Thailand.",c:"nature",lat:6.8362,lng:99.7554,type:"Ecotourism",img:"https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&q=75"},
+  {n:"Bang Lang National Park",d:"Lush wildlife sanctuary and reservoir, Yala province, Thailand.",c:"nature",lat:6.0205,lng:101.3713,type:"Ecotourism",img:"https://images.unsplash.com/photo-1448375240586-882707db888b?w=600&q=75"},
+  /* NEW: Gunung Stong from KML */
+  {n:"Gunung Stong State Park",d:"Dramatic mountain landscape with Stong Falls — one of Malaysia's highest free-falling waterfalls. Jelawang, Kelantan.",c:"nature",lat:5.4639,lng:101.7980,type:"Ecotourism – Geopark",recog:"Stong Geopark – Geopark Kebangsaan (KeTSA)",img:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=75"},
+  /* NEW: Langkawi Geopark as nature node */
+  {n:"Kilim Karst Geoforest Park, Langkawi",d:"Mangrove boat tours, sea caves, sea eagles, Langkawi UNESCO Global Geopark.",c:"nature",lat:6.4050,lng:99.8650,type:"Ecotourism – Geopark",recog:"UNESCO Global Geopark – Kilim Geoforest, Langkawi (2007)",img:"https://images.unsplash.com/photo-1448375240586-882707db888b?w=600&q=75"},
+];
+
+/* CATEGORY CONFIG */
+const CATS={
+  border_crossing:{label:"Border Crossings",color:"#E53935",emoji:"⛩️"},
+  industrial:     {label:"Industrial Parks",color:"#7E57C2",emoji:"🏭"},
+  university:     {label:"Universities / HLI",color:"#43A047",emoji:"🎓"},
+  airport:        {label:"Airports",color:"#1E88E5",emoji:"✈️"},
+  port:           {label:"Ports & Jetties",color:"#00ACC1",emoji:"⚓"},
+  railway:        {label:"Railway / ECRL",color:"#FB8C00",emoji:"🚆"},
+  shopping:       {label:"Duty Free / Shopping",color:"#C9910E",emoji:"🛍️"},
+  tourism:        {label:"Tourism Sites",color:"#C4622D",emoji:"🌟"},
+  nature:         {label:"Nature & Geoparks",color:"#558B2F",emoji:"🌿"},
+};
+
+/* STATE */
+let map, baseLayers={}, catGrps={}, panelOpen=true, curMode='investor';
+const vis={};
+Object.keys(CATS).forEach(k=>vis[k]=true);
+
+/* INIT MAP */
+function initMap(){
+  map=L.map('map',{center:[6.3,100.9],zoom:7,zoomControl:false});
+  L.control.zoom({position:'topright'}).addTo(map);
+  L.control.scale({position:'bottomright',metric:true,imperial:false}).addTo(map);
+  baseLayers.osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19});
+  baseLayers.satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+  baseLayers.dark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
+  baseLayers.topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17});
+  baseLayers.osm.addTo(map);
+  map.on('mousemove',e=>document.getElementById('coordLive').textContent=`${e.latlng.lat.toFixed(5)}°N, ${e.latlng.lng.toFixed(5)}°E`);
+  Object.keys(CATS).forEach(cat=>{
+    const g=L.layerGroup();
+    F.filter(f=>f.c===cat).forEach(f=>mkMkr(f).addTo(g));
+    catGrps[cat]=g; g.addTo(map);
+  });
+  setTimeout(()=>document.getElementById('mloader').classList.add('done'),1300);
+}
+
+function mkMkr(f){
+  const C=CATS[f.c];
+  const hasCrown=f.recog&&(f.recog.includes('UNESCO')||f.recog.includes('Geopark')||f.recog.includes('Warisan'));
+  const crown=hasCrown?`<text x='15' y='5.5' font-size='7' text-anchor='middle' fill='${C.color}' font-family='sans-serif'>★</text>`:'';
+  const svg=`<svg xmlns='http://www.w3.org/2000/svg' width='30' height='38' viewBox='0 0 30 38'>
+    <defs><filter id='g'><feDropShadow dx='0' dy='3' stdDeviation='3.5' flood-color='${C.color}' flood-opacity='0.5'/></filter></defs>
+    <path d='M15 0C6.7 0 0 6.7 0 15c0 11.3 15 23 15 23S30 26.3 30 15 23.3 0 15 0z' fill='${C.color}' filter='url(#g)' opacity='0.93'/>
+    <circle cx='15' cy='15' r='8' fill='rgba(255,255,255,0.93)'/><text x='15' y='19.5' font-size='9.5' text-anchor='middle' font-family='sans-serif'>${C.emoji}</text>${crown}
+  </svg>`;
+  const icon=L.divIcon({html:svg,iconSize:[30,38],iconAnchor:[15,38],popupAnchor:[0,-42],className:''});
+  const m=L.marker([f.lat,f.lng],{icon});
+  const roiMap={industrial:'12–25% ROI',border_crossing:'High footfall zone',port:'Trade gateway',airport:'Connectivity hub',railway:'ECRL linkage'};
+  const tourMap={nature:'Ecotourism 🌿',tourism:'Must-See 🌟',shopping:'Shopping 🛍️',airport:'Gateway ✈️',port:'Cruise ⚓'};
+  const recHtml=f.recog?`<div class='precog'><span>🏛</span><span class='precog-t'>${f.recog}</span></div>`:'';
+  const rmkHtml=f.remark?`<div class='prmk'>🔨 ${f.remark}</div>`:'';
+  const typHtml=f.type?`<div class='ptyp'>${f.type}</div>`:'';
+  const bdgHtml=roiMap[f.c]?`<div class='pbadge inv'>📈 ${roiMap[f.c]}</div>`:(tourMap[f.c]?`<div class='pbadge tour'>${tourMap[f.c]}</div>`:'');
+  m.bindPopup(`<span class='pem'>${C.emoji}</span><div class='ptt'>${f.n}</div><div class='pcat'>${C.label}</div>${typHtml}<div class='psep'></div><div class='pdesc'>${f.d}</div>${recHtml}${rmkHtml}${bdgHtml}<div class='pcoords'>${f.lat.toFixed(5)}°N, ${f.lng.toFixed(5)}°E</div>`,{maxWidth:285});
+  return m;
+}
+
+/* MODE */
+function setMode(m){
+  curMode=m;
+  document.querySelectorAll('.tb-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-'+m).classList.add('active');
+  document.querySelectorAll('.lp-pane').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pane-'+m).classList.add('on');
+  if(m==='layers')buildLayerCtrl();
+}
+function togglePanel(){
+  panelOpen=!panelOpen;
+  document.getElementById('lpanel').classList.toggle('slim',!panelOpen);
+  document.getElementById('lptog').textContent=panelOpen?'◀':'▶';
+}
+
+/* LAYER CONTROL */
+function buildLayerCtrl(){
+  const G={'🛤 Infrastructure':['airport','port','railway'],'⚙️ Economic Zones':['industrial','shopping'],'🎓 Education':['university'],'🛂 Border Crossings':['border_crossing'],'🌿 Nature & Tourism':['nature','tourism']};
+  let h='';
+  Object.entries(G).forEach(([gn,cats])=>{
+    h+=`<div class='lgg'><div class='lgh' onclick='this.classList.toggle("shut");this.nextElementSibling.style.display=this.classList.contains("shut")?"none":""'><span>${gn}</span><span class='lga'>▾</span></div><div class='lgi'>`;
+    cats.forEach(cat=>{const C=CATS[cat],cnt=F.filter(f=>f.c===cat).length;
+      h+=`<div class='lgi-row' onclick='toggleCat("${cat}")'><div class='lgdot' id='dot-${cat}' style='background:${C.color}'></div><span class='lgnm'>${C.emoji} ${C.label}</span><span class='lgcnt'>${cnt}</span><div class='lgtog on' id='tog-${cat}'></div></div>`;
+    });
+    h+='</div></div>';
+  });
+  document.getElementById('lyrGrps').innerHTML=h;
+}
+function toggleCat(cat){
+  vis[cat]=!vis[cat];
+  const t=document.getElementById('tog-'+cat),d=document.getElementById('dot-'+cat);
+  if(vis[cat]){catGrps[cat].addTo(map);t&&t.classList.add('on');if(d)d.style.opacity='1';}
+  else{map.removeLayer(catGrps[cat]);t&&t.classList.remove('on');if(d)d.style.opacity='0.25';}
+  document.getElementById('visCount').textContent=F.filter(f=>vis[f.c]).length;
+}
+
+/* FLY */
+function flyGroup(cat){const pts=F.filter(f=>f.c===cat);if(!pts.length)return;map.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lng])),{padding:[70,70],maxZoom:12});}
+function flyCoords(lat,lng){map.flyTo([lat,lng],13,{duration:1.5});}
+
+/* SEARCH */
+let srchGrp=null;
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('mapSrch').addEventListener('input',function(){
+    if(srchGrp){map.removeLayer(srchGrp);srchGrp=null;}
+    Object.keys(CATS).forEach(cat=>{map.removeLayer(catGrps[cat]);if(vis[cat])catGrps[cat].addTo(map);});
+    const q=this.value.toLowerCase().trim();
+    if(!q)return;
+    Object.keys(CATS).forEach(cat=>map.removeLayer(catGrps[cat]));
+    srchGrp=L.layerGroup().addTo(map);
+    const hits=F.filter(f=>f.n.toLowerCase().includes(q)||f.d.toLowerCase().includes(q)||CATS[f.c].label.toLowerCase().includes(q)||(f.recog||'').toLowerCase().includes(q)||(f.type||'').toLowerCase().includes(q));
+    hits.forEach(f=>mkMkr(f).addTo(srchGrp));
+    if(hits.length===1)map.flyTo([hits[0].lat,hits[0].lng],14,{duration:1.2});
+    else if(hits.length>1)map.fitBounds(L.latLngBounds(hits.map(h=>[h.lat,h.lng])),{padding:[60,60]});
+    document.getElementById('visCount').textContent=hits.length+' results';
+  });
+  document.getElementById('lyrSrch').addEventListener('input',function(){
+    const q=this.value.toLowerCase();
+    document.querySelectorAll('.lgi-row').forEach(el=>el.style.display=(!q||el.querySelector('.lgnm').textContent.toLowerCase().includes(q))?'':'none');
+  });
+});
+
+/* BASEMAP */
+function setBasemap(n,btn){
+  document.querySelectorAll('.bmbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+  Object.values(baseLayers).forEach(l=>{try{map.removeLayer(l);}catch(e){}});
+  baseLayers[n].addTo(map);baseLayers[n].bringToBack();
+}
+
+/* LEGEND */
+function buildLegend(){
+  document.getElementById('legBody').innerHTML=Object.entries(CATS).map(([k,v])=>
+    `<div class='legrow' onclick='flyGroup("${k}")'><div class='legdot' style='background:${v.color}'></div><span class='leglbl'>${v.emoji} ${v.label}</span></div>`
+  ).join('');
+}
+
+/* TOURIST PANEL */
+const TCATS=['nature','tourism','shopping'];
+let aFilter='all', aRec='';
+function buildTouristPanel(){
+  const chips=[{k:'all',l:'🌏 All',col:'#C9910E'},...TCATS.map(k=>({k,l:CATS[k].emoji+' '+CATS[k].label.split(' ')[0],col:CATS[k].color}))];
+  document.getElementById('tourFilters').innerHTML=chips.map(ch=>
+    `<div class='fchip ${ch.k==="all"?"on":""}' data-k='${ch.k}' style='background:${ch.k==="all"?ch.col+"22":"transparent"};border-color:${ch.col}44;color:${ch.col}' onclick='filterSpots("cat","${ch.k}",this)'>${ch.l}</div>`
+  ).join('');
+  renderSpots();
+}
+function filterSpots(kind,val,btn){
+  if(kind==='cat'){aFilter=val;aRec='';document.querySelectorAll('.fchip').forEach(c=>c.classList.remove('on'));if(btn)btn.classList.add('on');}
+  if(kind==='rec'){aRec=val;aFilter='all';document.querySelectorAll('.fchip').forEach(c=>c.classList.remove('on'));}
+  renderSpots();
+  if(val!=='all'&&kind==='cat')flyGroup(val);
+}
+function renderSpots(){
+  let spots=F.filter(f=>TCATS.includes(f.c));
+  if(aFilter!=='all')spots=spots.filter(f=>f.c===aFilter);
+  if(aRec){
+    if(aRec==='UNESCO')spots=spots.filter(f=>(f.recog||'').includes('UNESCO'));
+    else if(aRec==='Geopark')spots=spots.filter(f=>(f.recog||'').includes('Geopark')||(f.type||'').includes('Geopark'));
+    else if(aRec==='Heritage')spots=spots.filter(f=>(f.type||'').includes('Heritage'));
+    else if(aRec==='Under Construction')spots=spots.filter(f=>f.remark);
+  }
+  document.getElementById('tourGrid').innerHTML=spots.slice(0,28).map((f,i)=>{
+    const C=CATS[f.c];
+    const tgRec=f.recog?`<div class='stag rc'>🏛 Recognised</div>`:'';
+    const tgRmk=f.remark?`<div class='stag rm'>🔨 Active</div>`:'';
+    const recHtml=f.recog?`<div class='srcg'><span class='srcgi'>🏛</span><div class='srcgt'>${f.recog}</div></div>`:'';
+    const rmkHtml=f.remark?`<div class='srmk'>${f.remark}</div>`:'';
+    return `<div class='scard' onclick='flyCoords(${f.lat},${f.lng})' style='animation-delay:${i*0.035}s'>
+      <div class='simg' style='background:linear-gradient(135deg,${C.color}33,#1E331855)'>
+        <div class='sib'>${C.emoji}</div>
+        ${f.img?`<img src='${f.img}' loading='lazy' onload='this.classList.add("vis")' onerror='this.style.display="none"' alt='${f.n}'>`:''}
+        <div class='stagw'><div class='stag ct'>${C.label}</div>${tgRec}${tgRmk}</div>
+      </div>
+      <div class='sbdy'>
+        <div class='styp'>${f.type||C.label}</div>
+        <div class='snm'>${f.n}</div>
+        <div class='sdesc'>${f.d.substring(0,85)}${f.d.length>85?'…':''}</div>
+        ${recHtml}${rmkHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* CHARTS */
+Chart.defaults.color='rgba(232,220,192,0.5)';
+Chart.defaults.borderColor='rgba(201,145,14,0.1)';
+Chart.defaults.font.family='Noto Sans';Chart.defaults.font.size=10;
+function buildCharts(){
+  const cats=Object.keys(CATS);
+  new Chart(document.getElementById('donutChart'),{
+    type:'doughnut',
+    data:{labels:cats.map(c=>CATS[c].emoji+' '+CATS[c].label),datasets:[{data:cats.map(c=>F.filter(f=>f.c===c).length),backgroundColor:cats.map(c=>CATS[c].color),borderWidth:2,borderColor:'#16240F'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'right',labels:{boxWidth:8,padding:5,font:{size:9}}}}}
+  });
+  new Chart(document.getElementById('lineChart'),{
+    type:'line',
+    data:{labels:['2019','2020','2021','2022','2023','2024'],datasets:[
+      {label:'International',data:[12.4,4.1,2.8,7.3,11.2,14.5],borderColor:'#C9910E',backgroundColor:'rgba(201,145,14,0.08)',tension:0.4,fill:true,pointRadius:3,pointBackgroundColor:'#C9910E'},
+      {label:'Domestic',data:[5.2,6.8,7.1,5.9,6.4,7.1],borderColor:'#267A6A',backgroundColor:'rgba(38,122,106,0.06)',tension:0.4,fill:true,pointRadius:3,pointBackgroundColor:'#267A6A'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:8,padding:6}}},scales:{y:{beginAtZero:false}}}
+  });
+  new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{labels:['Kedah','Songkhla','Kelantan','Perak','Pattani'],datasets:[{label:'Zones',data:[9,7,4,2,3],backgroundColor:['#C9910E','#7E57C2','#1E88E5','#43A047','#E53935'],borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+  });
+}
+
+window.addEventListener('load',()=>{initMap();buildLegend();buildTouristPanel();buildCharts();});
+</script>
+</body>
+</html>
