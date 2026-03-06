@@ -4,12 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MY–TH BEZ · NCER</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
+  <link rel="dns-prefetch" href="https://tile.openstreetmap.org">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Noto+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="geodata.js"></script>
 <style>
 :root{
   --java:#F0F7F4; --forest:#E8F5F0; --bark:#D6EDE5;
@@ -422,6 +423,7 @@ body::before{
     <button class="tb-btn" id="btn-krc" onclick="setMode('krc')"><span class="bi">🌿</span>KRC · Rubber City</button>
     <div class="tb-div"></div>
     <button class="tb-btn" id="btn-layers" onclick="setMode('layers')"><span class="bi">🗂</span>Layers</button>
+    <button class="tb-btn" id="btn-analytics" onclick="setMode('analytics')"><span class="bi">📊</span>Analytics</button>
   </div>
   <div class="tb-right">
     <div class="tb-stat"><div class="tb-sv">RM 5.9B</div><div class="tb-sl">Tourism Rev(2024 Target)</div></div>
@@ -588,6 +590,68 @@ body::before{
         <div class="cvia-act-btn secondary" onclick="window.open('https://www.ncer.com.my/invest-in-ncer/thematic-industrial-parks/kedah-rubber-city-krc','_blank')">🔗 NCER Website</div>
       </div>
     </div>
+
+    <!-- ANALYTICS PANE — Border Movement Data 2018-2025 -->
+    <div class="lp-pane" id="pane-analytics" style="display:none;flex-direction:column;overflow:hidden">
+      <div class="lp-hd" style="background:linear-gradient(180deg,rgba(13,107,88,0.12),transparent)">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--teal),var(--teal2),transparent)"></div>
+        <div class="lp-eye">Pergerakan Pelawat NCER</div>
+        <div class="lp-title">Border Movement Analytics</div>
+        <div class="lp-desc">Visitor arrivals &amp; departures at 8 MY–TH border checkpoints, 2018–2025.</div>
+      </div>
+
+      <!-- Year selector -->
+      <div style="display:flex;gap:4px;padding:8px 10px 4px;flex-wrap:wrap;border-bottom:1px solid var(--border);flex-shrink:0" id="an-year-tabs">
+        <button class="ztab" onclick="anSetYear('all',this)" style="font-size:0.52rem">All</button>
+      </div>
+
+      <!-- KPI strip -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0" id="an-kpis">
+        <div class="cvia-stat"><div class="cvia-sv" id="an-kpi-arr" style="color:var(--teal2)">—</div><div class="cvia-sl">Arrivals</div></div>
+        <div class="cvia-stat"><div class="cvia-sv" id="an-kpi-dep" style="color:var(--gold2)">—</div><div class="cvia-sl">Departures</div></div>
+        <div class="cvia-stat"><div class="cvia-sv" id="an-kpi-peak" style="color:#F48FB1">—</div><div class="cvia-sl">Peak Crossing</div></div>
+      </div>
+
+      <div style="flex:1;overflow-y:auto;padding:0.6rem 0.7rem" id="an-scroll">
+
+        <!-- Trend chart -->
+        <div class="cblk">
+          <div class="cttl">Annual Trend — Total Movement</div>
+          <div style="position:relative;height:130px"><canvas id="anTrendChart"></canvas></div>
+        </div>
+
+        <!-- Crossing breakdown -->
+        <div class="cblk">
+          <div class="cttl" style="display:flex;justify-content:space-between;align-items:center">
+            Crossing Breakdown
+            <div style="display:flex;gap:4px">
+              <button class="ztab" id="an-dir-arr" onclick="anSetDir('arr',this)" style="padding:1px 8px;font-size:0.5rem;min-width:0" class="on">ARR</button>
+              <button class="ztab" id="an-dir-dep" onclick="anSetDir('dep',this)" style="padding:1px 8px;font-size:0.5rem;min-width:0">DEP</button>
+            </div>
+          </div>
+          <div style="position:relative;height:160px"><canvas id="anBarChart"></canvas></div>
+        </div>
+
+        <!-- Monthly heatmap crossing selector -->
+        <div class="cblk">
+          <div class="cttl" style="display:flex;justify-content:space-between;align-items:center">
+            Monthly Pattern
+            <select id="an-crossing-sel" onchange="anRenderMonthly()" style="font-size:0.6rem;background:rgba(255,255,255,0.07);border:1px solid var(--border2);color:var(--cream);border-radius:4px;padding:1px 5px;cursor:pointer">
+              <option value="all">All Crossings</option>
+            </select>
+          </div>
+          <div style="position:relative;height:120px"><canvas id="anMonthChart"></canvas></div>
+        </div>
+
+        <!-- Crossing table -->
+        <div class="cblk">
+          <div class="cttl">Crossing Summary</div>
+          <div id="an-table" style="font-size:0.62rem;overflow:hidden"></div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 
   <!-- MAP -->
@@ -806,12 +870,23 @@ function initMap(){
   baseLayers.dark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
   baseLayers.topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17});
   baseLayers.osm.addTo(map);
+
   map.on('mousemove',e=>document.getElementById('coordLive').textContent=`${e.latlng.lat.toFixed(5)}°N, ${e.latlng.lng.toFixed(5)}°E`);
   Object.keys(CATS).forEach(cat=>{
     const g=L.layerGroup();
     F.filter(f=>f.c===cat).forEach(f=>mkMkr(f).addTo(g));
     catGrps[cat]=g; g.addTo(map);
   });
+  initGeoLayers();
+  setTimeout(()=>{
+    document.getElementById('mloader').classList.add('done');
+    const total=F.length+(typeof ECRL_DATA!=='undefined'?ECRL_DATA.features.length:0)+(typeof MY_BEZ_DATA!=='undefined'?MY_BEZ_DATA.features.length:0);
+    const el=document.getElementById('totalFeatureCount');
+    if(el) el.textContent=total+'+';
+  },400);
+}
+
+function initGeoLayers(){
   /* Industrial Park Polygons */
   indParkLayer=L.geoJSON(INDPARK_GEOJSON,{
     style:function(feature){
@@ -858,13 +933,6 @@ function initMap(){
       layer.on('mouseout',function(){indParkLayer.resetStyle(layer);});
     }
   }).addTo(map);
-  setTimeout(()=>{
-    document.getElementById('mloader').classList.add('done');
-    const total = F.length + ECRL_DATA.features.length + KTMB_DATA.features.length + MY_BEZ_DATA.features.length + TH_BEZ_DATA.features.length;
-    const el = document.getElementById('totalFeatureCount');
-    if(el) el.textContent = total + '+';
-  },1300);
-
   /* ═══════════════════════════════════════════════
      RAILWAY LAYERS — ECRL, KTMB, KTMB Non-Op
   ═══════════════════════════════════════════════ */
@@ -987,6 +1055,7 @@ function setMode(m){
   if(m==='layers') buildLayerCtrl();
   if(m==='cvia') buildCVIAPane();
   if(m==='krc') buildKRCPane();
+  if(m==='analytics') buildAnalytics();
 }
 function togglePanel(){
   panelOpen=!panelOpen;
@@ -1282,10 +1351,10 @@ function renderSpots(){
 }
 
 /* CHARTS */
-Chart.defaults.color='rgba(26,46,26,0.5)';
-Chart.defaults.borderColor='rgba(201,145,14,0.1)';
-Chart.defaults.font.family='Noto Sans';Chart.defaults.font.size=10;
 function buildCharts(){
+  Chart.defaults.color='rgba(26,46,26,0.5)';
+  Chart.defaults.borderColor='rgba(201,145,14,0.1)';
+  Chart.defaults.font.family='Noto Sans';Chart.defaults.font.size=10;
   const cats=Object.keys(CATS);
   new Chart(document.getElementById('donutChart'),{
     type:'doughnut',
@@ -1882,6 +1951,206 @@ window.addEventListener('load',()=>{
     });
   }
 });
+
+/* ══════════════════════════════════════════════════════
+   ANALYTICS — Border Movement Data 2018-2025
+   Data: CROSSINGS_DATA, CROSSING_YEARS, CROSSING_GRAND
+══════════════════════════════════════════════════════ */
+let anCharts = {};
+let anYear = 'all';
+let anDir  = 'arr';
+let anBuilt = false;
+
+function fmt(n){ if(!n||n===0) return '0'; if(n>=1e6) return (n/1e6).toFixed(2)+'M'; if(n>=1e3) return (n/1e3).toFixed(0)+'K'; return n.toString(); }
+
+function anSetYear(yr, el){
+  anYear = yr === 'all' ? 'all' : parseInt(yr);
+  document.querySelectorAll('#an-year-tabs .ztab').forEach(b=>b.classList.remove('on'));
+  if(el) el.classList.add('on');
+  anRefresh();
+}
+function anSetDir(dir, el){
+  anDir = dir;
+  document.querySelectorAll('#an-dir-arr,#an-dir-dep').forEach(b=>b.classList.remove('on'));
+  if(el) el.classList.add('on');
+  anRenderBar();
+}
+
+function anGetTotal(crossing, yr, dir){
+  if(!CROSSINGS_DATA) return 0;
+  const c = CROSSINGS_DATA.find(x=>x.name===crossing||x.full===crossing);
+  if(!c) return 0;
+  if(yr==='all') return CROSSING_YEARS.reduce((s,y)=>(s + (c.yearly[y]?.[dir]||0)),0);
+  return c.yearly[yr]?.[dir]||0;
+}
+
+function anGrandTotal(dir){
+  if(anYear==='all') return CROSSING_YEARS.reduce((s,y)=>(s+(CROSSING_GRAND[y]?.[dir]||0)),0);
+  return CROSSING_GRAND[anYear]?.[dir]||0;
+}
+
+function anPeakCrossing(dir){
+  if(!CROSSINGS_DATA) return '—';
+  let best='', bestVal=0;
+  CROSSINGS_DATA.forEach(c=>{
+    const v = anGetTotal(c.name,'all',dir);
+    if(v>bestVal){bestVal=v;best=c.name;}
+  });
+  return best;
+}
+
+function anRefresh(){
+  // KPIs
+  const arr = anGrandTotal('arr'), dep = anGrandTotal('dep');
+  document.getElementById('an-kpi-arr').textContent = fmt(arr);
+  document.getElementById('an-kpi-dep').textContent = fmt(dep);
+  document.getElementById('an-kpi-peak').textContent = anPeakCrossing('arr');
+  anRenderTrend();
+  anRenderBar();
+  anRenderMonthly();
+  anRenderTable();
+}
+
+function anRenderTrend(){
+  const labels = CROSSING_YEARS.map(String);
+  const arrData = CROSSING_YEARS.map(y=>CROSSING_GRAND[y]?.arr||0);
+  const depData = CROSSING_YEARS.map(y=>CROSSING_GRAND[y]?.dep||0);
+  const ctx = document.getElementById('anTrendChart');
+  if(!ctx) return;
+  if(anCharts.trend) anCharts.trend.destroy();
+  anCharts.trend = new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Arrivals',data:arrData,borderColor:'#4DB6AC',backgroundColor:'rgba(77,182,172,0.12)',tension:0.4,fill:true,pointRadius:3,borderWidth:2},
+      {label:'Departures',data:depData,borderColor:'#FFB74D',backgroundColor:'rgba(255,183,77,0.08)',tension:0.4,fill:true,pointRadius:3,borderWidth:2,borderDash:[4,3]}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',labels:{boxWidth:8,padding:6,font:{size:9}}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmt(ctx.raw)}`}}},
+      scales:{y:{ticks:{callback:v=>fmt(v),font:{size:8}},grid:{color:'rgba(201,145,14,0.08)'}},
+               x:{ticks:{font:{size:8}},grid:{display:false}}}}
+  });
+}
+
+function anRenderBar(){
+  if(!CROSSINGS_DATA) return;
+  const labels = CROSSINGS_DATA.map(c=>c.name.replace('Pengkalan ','Pkln ').replace('Bukit Kayu Hitam','BKH').replace('Rantau Panjang','R. Panjang').replace('Padang Besar','P. Besar').replace('Wang Kelian','W. Kelian').replace('ICQ Durian Burung','ICQ D.Burung').replace('Pos Imm Bukit Bunga','POS B.Bunga'));
+  const vals = CROSSINGS_DATA.map(c=>anGetTotal(c.name, anYear, anDir));
+  const colors = ['#4DB6AC','#81C784','#FFB74D','#F48FB1','#CE93D8','#90CAF9','#FFCC02','#A5D6A7'];
+  const ctx = document.getElementById('anBarChart');
+  if(!ctx) return;
+  if(anCharts.bar) anCharts.bar.destroy();
+  anCharts.bar = new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{label: anDir==='arr'?'Arrivals':'Departures',data:vals,backgroundColor:colors,borderRadius:4,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${fmt(ctx.raw)}`}}},
+      scales:{x:{ticks:{callback:v=>fmt(v),font:{size:8}},grid:{color:'rgba(201,145,14,0.08)'}},
+               y:{ticks:{font:{size:8}},grid:{display:false}}}}
+  });
+}
+
+function anRenderMonthly(){
+  const sel = document.getElementById('an-crossing-sel');
+  const selVal = sel ? sel.value : 'all';
+  const yearsToShow = anYear==='all' ? CROSSING_YEARS : [anYear];
+  const colors = ['#4DB6AC','#81C784','#FFB74D','#F48FB1','#CE93D8','#90CAF9','#FFCC02','#A5D6A7'];
+  let datasets = [];
+  if(selVal==='all'){
+    // Show total monthly across all crossings for each year shown (max 3 years to keep it readable)
+    const yrs = anYear==='all' ? CROSSING_YEARS.slice(-3) : [anYear];
+    yrs.forEach((yr,i)=>{
+      const monthly = Array(12).fill(0);
+      CROSSINGS_DATA.forEach(c=>{
+        (c.monthly[yr]?.[anDir]||[]).forEach((v,m)=>monthly[m]+=v);
+      });
+      datasets.push({label:String(yr),data:monthly,borderColor:colors[i],backgroundColor:colors[i]+'22',tension:0.4,fill:false,pointRadius:2,borderWidth:2});
+    });
+  } else {
+    const c = CROSSINGS_DATA.find(x=>x.name===selVal);
+    if(c){
+      const yrs = anYear==='all' ? CROSSING_YEARS.slice(-3) : [anYear];
+      yrs.forEach((yr,i)=>{
+        datasets.push({label:String(yr),data:c.monthly[yr]?.[anDir]||Array(12).fill(0),borderColor:colors[i],backgroundColor:colors[i]+'22',tension:0.4,fill:false,pointRadius:2,borderWidth:2});
+      });
+    }
+  }
+  const ctx = document.getElementById('anMonthChart');
+  if(!ctx) return;
+  if(anCharts.month) anCharts.month.destroy();
+  anCharts.month = new Chart(ctx,{
+    type:'line',
+    data:{labels:CROSSING_MONTHS,datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',labels:{boxWidth:8,padding:5,font:{size:9}}}},
+      scales:{y:{ticks:{callback:v=>fmt(v),font:{size:8}},grid:{color:'rgba(201,145,14,0.08)'}},
+               x:{ticks:{font:{size:8}},grid:{display:false}}}}
+  });
+}
+
+function anRenderTable(){
+  if(!CROSSINGS_DATA) return;
+  const rows = CROSSINGS_DATA.map(c=>{
+    const arr = anGetTotal(c.name, anYear, 'arr');
+    const dep = anGetTotal(c.name, anYear, 'dep');
+    const total = arr + dep;
+    return {name:c.name, arr, dep, total};
+  }).sort((a,b)=>b.total-a.total);
+  const maxT = rows[0]?.total||1;
+  const html = rows.map(r=>`
+    <div style="margin-bottom:7px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+        <span style="color:var(--cream);font-weight:600">${r.name}</span>
+        <span style="color:var(--muted)">${fmt(r.total)}</span>
+      </div>
+      <div style="display:flex;gap:3px;margin-bottom:2px">
+        <div style="flex:${r.arr};height:5px;background:#4DB6AC;border-radius:2px 0 0 2px" title="Arr: ${fmt(r.arr)}"></div>
+        <div style="flex:${r.dep};height:5px;background:#FFB74D;border-radius:0 2px 2px 0" title="Dep: ${fmt(r.dep)}"></div>
+        <div style="flex:${maxT-r.arr-r.dep};height:5px;background:rgba(255,255,255,0.05)"></div>
+      </div>
+      <div style="color:var(--muted);font-size:0.55rem">ARR ${fmt(r.arr)} · DEP ${fmt(r.dep)}</div>
+    </div>`).join('');
+  const el = document.getElementById('an-table');
+  if(el) el.innerHTML = html;
+}
+
+function buildAnalytics(){
+  if(anBuilt) { anRefresh(); return; }
+  anBuilt = true;
+  if(typeof CROSSINGS_DATA === 'undefined') { console.warn('pergerakan.js not loaded'); return; }
+
+  // Build year tabs
+  const tabContainer = document.getElementById('an-year-tabs');
+  CROSSING_YEARS.forEach(yr=>{
+    const btn = document.createElement('button');
+    btn.className='ztab'; btn.textContent=yr; btn.style.cssText='font-size:0.52rem;min-width:0';
+    btn.onclick=()=>anSetYear(yr,btn);
+    tabContainer.appendChild(btn);
+  });
+  // Set 'All' active by default
+  tabContainer.querySelector('.ztab').classList.add('on');
+
+  // Populate crossing selector
+  const sel = document.getElementById('an-crossing-sel');
+  CROSSINGS_DATA.forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c.name; opt.textContent = c.name;
+    sel.appendChild(opt);
+  });
+
+  // Set ARR dir button active
+  document.getElementById('an-dir-arr')?.classList.add('on');
+
+  anRefresh();
+}
 </script>
+
+
+
+  <!-- External libraries: placed at end of body for non-blocking load -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="geodata.js"></script>
+  <script src="pergerakan.js"></script>
 </body>
 </html>
