@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="geodata.js"></script>
 <style>
 :root{
   --java:#F0F7F4; --forest:#E8F5F0; --bark:#D6EDE5;
@@ -741,6 +742,11 @@ const INDPARK_GEOJSON = {"type":"FeatureCollection","name":"IndustrialParksEstat
 /* STATE */
 let map, baseLayers={}, catGrps={}, panelOpen=true, curMode='investor';
 let indParkLayer=null, indParkVisible=true;
+/* ── Railway & Border Layers ── */
+let ecrlLayer=null, ktmbLayer=null, ktmbNonLayer=null;
+let myBezLayer=null, thBezLayer=null, myThBoundaryLayer=null;
+let ecrlVisible=true, ktmbVisible=true, ktmbNonVisible=true;
+let myBezVisible=true, thBezVisible=true, myThBoundaryVisible=true;
 const vis={};
 Object.keys(CATS).forEach(k=>vis[k]=true);
 
@@ -788,6 +794,88 @@ function initMap(){
     }
   }).addTo(map);
   setTimeout(()=>document.getElementById('mloader').classList.add('done'),1300);
+
+  /* ═══════════════════════════════════════════════
+     RAILWAY LAYERS — ECRL, KTMB, KTMB Non-Op
+  ═══════════════════════════════════════════════ */
+  function railPopup(name, color, desc){
+    return `<span class='pem'>🚂</span><div class='ptt'>${name}</div>`+
+      `<div class='pcat' style='color:${color}'>Railway Line</div>`+
+      `<div class='psep'></div><div class='pdesc'>${desc}</div>`;
+  }
+
+  ecrlLayer = L.geoJSON(ECRL_DATA, {
+    style: { color:'#FF6F00', weight:3, opacity:0.92, dashArray:null },
+    onEachFeature: function(feature, layer){
+      layer.bindPopup(railPopup('East Coast Rail Link (ECRL)', '#FF6F00',
+        'High-speed rail linking the east and west coasts of Peninsular Malaysia. ~688 km, operational target 2027. Strategic corridor connecting Kota Bharu to Port Klang.'), {maxWidth:285});
+      layer.on('mouseover',function(){layer.setStyle({weight:5,opacity:1});});
+      layer.on('mouseout',function(){ecrlLayer.resetStyle(layer);});
+    }
+  }).addTo(map);
+
+  ktmbLayer = L.geoJSON(KTMB_DATA, {
+    style: { color:'#1565C0', weight:1.8, opacity:0.78 },
+    onEachFeature: function(feature, layer){
+      layer.bindPopup(railPopup('KTMB Keretapi Tanah Melayu', '#1565C0',
+        'National railway network (KTM) covering Peninsular Malaysia. Serves both intercity and commuter routes along the MY-TH corridor.'), {maxWidth:285});
+      layer.on('mouseover',function(){layer.setStyle({weight:3.5,opacity:1});});
+      layer.on('mouseout',function(){ktmbLayer.resetStyle(layer);});
+    }
+  }).addTo(map);
+
+  ktmbNonLayer = L.geoJSON(KTMB_NON_DATA, {
+    style: { color:'#78909C', weight:1.5, opacity:0.65, dashArray:'8,5' },
+    onEachFeature: function(feature, layer){
+      layer.bindPopup(railPopup('KTMB Non-Operational Track', '#78909C',
+        'Former or currently non-operational KTMB rail segments. Potential future rehabilitation or reactivation corridors.'), {maxWidth:285});
+      layer.on('mouseover',function(){layer.setStyle({weight:3,opacity:0.9});});
+      layer.on('mouseout',function(){ktmbNonLayer.resetStyle(layer);});
+    }
+  }).addTo(map);
+
+  /* ═══════════════════════════════════════════════
+     BORDER & BEZ LAYERS
+  ═══════════════════════════════════════════════ */
+  myThBoundaryLayer = L.geoJSON(MY_TH_BOUNDARY_DATA, {
+    style: { color:'#C62828', weight:2.5, opacity:0.9, dashArray:'10,5' },
+    onEachFeature: function(feature, layer){
+      layer.bindPopup(`<span class='pem'>🌐</span><div class='ptt'>MY–TH International Boundary</div>`+
+        `<div class='pcat' style='color:#C62828'>International Border</div>`+
+        `<div class='psep'></div><div class='pdesc'>Malaysia–Thailand international boundary. The shared border spans ~647 km from the Strait of Malacca to the South China Sea, crossing five Malaysian states (Perlis, Kedah, Perak, Kelantan, Terengganu) and four Thai provinces.</div>`, {maxWidth:285});
+      layer.on('mouseover',function(){layer.setStyle({weight:4.5,opacity:1});});
+      layer.on('mouseout',function(){myThBoundaryLayer.resetStyle(layer);});
+    }
+  }).addTo(map);
+
+  // State-code to name mapping for Malaysia BEZ states
+  const myStateNames = {'02':'Kedah','03':'Kelantan','04':'','08':'Perak','09':'Perlis','11':''};
+  myBezLayer = L.geoJSON(MY_BEZ_DATA, {
+    style: function(){return {color:'#1565C0', weight:1.2, opacity:0.8, fillColor:'#42A5F5', fillOpacity:0.12, dashArray:null};},
+    onEachFeature: function(feature, layer){
+      const nm = feature.properties.name || 'MY BEZ District';
+      layer.bindPopup(`<span class='pem'>🇲🇾</span><div class='ptt'>${nm}</div>`+
+        `<div class='pcat' style='color:#1565C0'>Malaysia BEZ — Border Economic Zone</div>`+
+        `<div class='psep'></div><div class='pdesc'>Malaysian administrative district within the MY–TH Border Economic Zone (BEZ). Part of the Northern Corridor Economic Region (NCER) strategic development area.</div>`, {maxWidth:285});
+      layer.on('mouseover',function(){layer.setStyle({fillOpacity:0.3,weight:2});});
+      layer.on('mouseout',function(){myBezLayer.resetStyle(layer);});
+    }
+  }).addTo(map);
+
+  // Thailand province name mapping
+  const thProvinceLabels = {'Satun':'สตูล – Satun','Songkhla':'สงขลา – Songkhla','Pattani':'ปัตตานี – Pattani','Narathiwat':'นราธิวาส – Narathiwat','Yala':'ยะลา – Yala'};
+  thBezLayer = L.geoJSON(TH_BEZ_DATA, {
+    style: function(){return {color:'#AD1457', weight:1.2, opacity:0.8, fillColor:'#F48FB1', fillOpacity:0.12};},
+    onEachFeature: function(feature, layer){
+      const nm = feature.properties.name || 'TH BEZ Province';
+      const label = thProvinceLabels[nm] || nm;
+      layer.bindPopup(`<span class='pem'>🇹🇭</span><div class='ptt'>${label}</div>`+
+        `<div class='pcat' style='color:#AD1457'>Thailand BEZ — Border Economic Zone</div>`+
+        `<div class='psep'></div><div class='pdesc'>Thai province within the MY–TH Border Economic Zone. Part of the Southern Thailand economic corridor under the IMT-GT bilateral framework.</div>`, {maxWidth:285});
+      layer.on('mouseover',function(){layer.setStyle({fillOpacity:0.3,weight:2});});
+      layer.on('mouseout',function(){thBezLayer.resetStyle(layer);});
+    }
+  }).addTo(map);
 }
 
 function mkMkr(f){
@@ -840,14 +928,30 @@ function togglePanel(){
 function buildLayerCtrl(){
   const G={'🛤 Infrastructure':['airport','port','railway'],'⚙️ Economic Zones':['industrial','shopping'],'🎓 Education':['university'],'🛂 Border Crossings':['border_crossing'],'🌿 Nature & Tourism':['nature','tourism']};
   let h='';
+
+  /* ── Railway Lines Group ── */
+  h+="<div class='lgg'><div class='lgh' onclick='this.classList.toggle(\"shut\");this.nextElementSibling.style.display=this.classList.contains(\"shut\")?\"none\":\"\"'><span>🚂 Railway Lines</span><span class='lga'>▾</span></div><div class='lgi'>";
+  h+="<div class='lgi-row' onclick='toggleECRL()'><div class='lgdot' id='dot-ecrl' style='background:#FF6F00;border-radius:2px;width:18px;height:5px;margin-top:5px'></div><span class='lgnm'>🟠 ECRL (East Coast Rail Link)</span><span class='lgcnt'>" + ECRL_DATA.features.length + "</span><div class='lgtog on' id='tog-ecrl'></div></div>";
+  h+="<div class='lgi-row' onclick='toggleKTMB()'><div class='lgdot' id='dot-ktmb' style='background:#1565C0;border-radius:2px;width:18px;height:5px;margin-top:5px'></div><span class='lgnm'>🔵 KTMB (KTM Operational)</span><span class='lgcnt'>" + KTMB_DATA.features.length + "</span><div class='lgtog on' id='tog-ktmb'></div></div>";
+  h+="<div class='lgi-row' onclick='toggleKTMBNon()'><div class='lgdot' id='dot-ktmb-non' style='background:#78909C;border-radius:2px;width:18px;height:5px;margin-top:5px;opacity:0.7'></div><span class='lgnm'>⬜ KTMB Non-Operational</span><span class='lgcnt'>" + KTMB_NON_DATA.features.length + "</span><div class='lgtog on' id='tog-ktmb-non'></div></div>";
+  h+="</div></div>";
+
+  /* ── Border & BEZ Group ── */
+  h+="<div class='lgg'><div class='lgh' onclick='this.classList.toggle(\"shut\");this.nextElementSibling.style.display=this.classList.contains(\"shut\")?\"none\":\"\"'><span>🌐 Border & Economic Zones</span><span class='lga'>▾</span></div><div class='lgi'>";
+  h+="<div class='lgi-row' onclick='toggleMYTHBoundary()'><div class='lgdot' id='dot-my-th-boundary' style='background:#C62828;border-radius:2px;width:18px;height:3px;margin-top:7px'></div><span class='lgnm'>🔴 MY–TH International Boundary</span><span class='lgcnt'>1</span><div class='lgtog on' id='tog-my-th-boundary'></div></div>";
+  h+="<div class='lgi-row' onclick='toggleMYBez()'><div class='lgdot' id='dot-my-bez' style='background:#1565C0;border-radius:2px;width:14px;height:14px;opacity:0.5'></div><span class='lgnm'>🇲🇾 Malaysia BEZ Districts</span><span class='lgcnt'>" + MY_BEZ_DATA.features.length + "</span><div class='lgtog on' id='tog-my-bez'></div></div>";
+  h+="<div class='lgi-row' onclick='toggleTHBez()'><div class='lgdot' id='dot-th-bez' style='background:#AD1457;border-radius:2px;width:14px;height:14px;opacity:0.5'></div><span class='lgnm'>🇹🇭 Thailand BEZ Provinces</span><span class='lgcnt'>" + TH_BEZ_DATA.features.length + "</span><div class='lgtog on' id='tog-th-bez'></div></div>";
+  h+="</div></div>";
+
   /* Industrial Park Polygons special row */
-  h+=`<div class='lgg'><div class='lgh' onclick='this.classList.toggle("shut");this.nextElementSibling.style.display=this.classList.contains("shut")?"none":""'><span>🗺 Polygon Overlays</span><span class='lga'>▾</span></div><div class='lgi'>`;
-  h+=`<div class='lgi-row' onclick='toggleIndPark()'><div class='lgdot' id='dot-indpark' style='background:#9575CD;border-radius:2px'></div><span class='lgnm'>🏭 Industrial Park Areas</span><span class='lgcnt'>${INDPARK_GEOJSON.features.length}</span><div class='lgtog on' id='tog-indpark'></div></div>`;
-  h+=`</div></div>`;
+  h+="<div class='lgg'><div class='lgh' onclick='this.classList.toggle(\"shut\");this.nextElementSibling.style.display=this.classList.contains(\"shut\")?\"none\":\"\"'><span>🗺 Polygon Overlays</span><span class='lga'>▾</span></div><div class='lgi'>";
+  h+="<div class='lgi-row' onclick='toggleIndPark()'><div class='lgdot' id='dot-indpark' style='background:#9575CD;border-radius:2px'></div><span class='lgnm'>🏭 Industrial Park Areas</span><span class='lgcnt'>" + INDPARK_GEOJSON.features.length + "</span><div class='lgtog on' id='tog-indpark'></div></div>";
+  h+="</div></div>";
+
   Object.entries(G).forEach(([gn,cats])=>{
-    h+=`<div class='lgg'><div class='lgh' onclick='this.classList.toggle("shut");this.nextElementSibling.style.display=this.classList.contains("shut")?"none":""'><span>${gn}</span><span class='lga'>▾</span></div><div class='lgi'>`;
+    h+="<div class='lgg'><div class='lgh' onclick='this.classList.toggle(\"shut\");this.nextElementSibling.style.display=this.classList.contains(\"shut\")?\"none\":\"\"'><span>"+gn+"</span><span class='lga'>▾</span></div><div class='lgi'>";
     cats.forEach(cat=>{const C=CATS[cat],cnt=F.filter(f=>f.c===cat).length;
-      h+=`<div class='lgi-row' onclick='toggleCat("${cat}")'><div class='lgdot' id='dot-${cat}' style='background:${C.color}'></div><span class='lgnm'>${C.emoji} ${C.label}</span><span class='lgcnt'>${cnt}</span><div class='lgtog on' id='tog-${cat}'></div></div>`;
+      h+="<div class='lgi-row' onclick='toggleCat(\""+cat+"\")' ><div class='lgdot' id='dot-"+cat+"' style='background:"+C.color+"'></div><span class='lgnm'>"+C.emoji+" "+C.label+"</span><span class='lgcnt'>"+cnt+"</span><div class='lgtog on' id='tog-"+cat+"'></div></div>";
     });
     h+='</div></div>';
   });
@@ -868,6 +972,21 @@ function toggleIndPark(){
   if(indParkVisible){indParkLayer.addTo(map);if(t)t.classList.add('on');if(d)d.style.opacity='1';}
   else{map.removeLayer(indParkLayer);if(t)t.classList.remove('on');if(d)d.style.opacity='0.25';}
 }
+
+/* ── Railway Toggle Functions ── */
+function _toggleLayer(layer, visRef, id, setVis){
+  setVis(!visRef);
+  const t=document.getElementById('tog-'+id), d=document.getElementById('dot-'+id);
+  const nowVis = !visRef;
+  if(nowVis){layer.addTo(map);if(t)t.classList.add('on');if(d)d.style.opacity='1';}
+  else{map.removeLayer(layer);if(t)t.classList.remove('on');if(d)d.style.opacity='0.25';}
+}
+function toggleECRL(){ecrlVisible=!ecrlVisible;const t=document.getElementById('tog-ecrl'),d=document.getElementById('dot-ecrl');if(ecrlVisible){ecrlLayer.addTo(map);if(t)t.classList.add('on');if(d)d.style.opacity='1';}else{map.removeLayer(ecrlLayer);if(t)t.classList.remove('on');if(d)d.style.opacity='0.25';}}
+function toggleKTMB(){ktmbVisible=!ktmbVisible;const t=document.getElementById('tog-ktmb'),d=document.getElementById('dot-ktmb');if(ktmbVisible){ktmbLayer.addTo(map);if(t)t.classList.add('on');if(d)d.style.opacity='1';}else{map.removeLayer(ktmbLayer);if(t)t.classList.remove('on');if(d)d.style.opacity='0.25';}}
+function toggleKTMBNon(){ktmbNonVisible=!ktmbNonVisible;const t=document.getElementById('tog-ktmb-non'),d=document.getElementById('dot-ktmb-non');if(ktmbNonVisible){ktmbNonLayer.addTo(map);if(t)t.classList.add('on');if(d)d.style.opacity='1';}else{map.removeLayer(ktmbNonLayer);if(t)t.classList.remove('on');if(d)d.style.opacity='0.25';}}
+function toggleMYBez(){myBezVisible=!myBezVisible;const t=document.getElementById('tog-my-bez'),d=document.getElementById('dot-my-bez');if(myBezVisible){myBezLayer.addTo(map);if(t)t.classList.add('on');if(d)d.style.opacity='1';}else{map.removeLayer(myBezLayer);if(t)t.classList.remove('on');if(d)d.style.opacity='0.25';}}
+function toggleTHBez(){thBezVisible=!thBezVisible;const t=document.getElementById('tog-th-bez'),d=document.getElementById('dot-th-bez');if(thBezVisible){thBezLayer.addTo(map);if(t)t.classList.add('on');if(d)d.style.opacity='1';}else{map.removeLayer(thBezLayer);if(t)t.classList.remove('on');if(d)d.style.opacity='0.25';}}
+function toggleMYTHBoundary(){myThBoundaryVisible=!myThBoundaryVisible;const t=document.getElementById('tog-my-th-boundary'),d=document.getElementById('dot-my-th-boundary');if(myThBoundaryVisible){myThBoundaryLayer.addTo(map);if(t)t.classList.add('on');if(d)d.style.opacity='1';}else{map.removeLayer(myThBoundaryLayer);if(t)t.classList.remove('on');if(d)d.style.opacity='0.25';}}
 
 /* FLY */
 function flyGroup(cat){const pts=F.filter(f=>f.c===cat);if(!pts.length)return;map.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lng])),{padding:[70,70],maxZoom:12});}
@@ -1542,4 +1661,3 @@ window.addEventListener('load',()=>{initMap();buildLegend();buildTouristPanel();
 </script>
 </body>
 </html>
-
