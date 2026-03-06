@@ -1093,27 +1093,120 @@ function updateLayerStats() {
 function flyGroup(cat){const pts=F.filter(f=>f.c===cat);if(!pts.length)return;map.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lng])),{padding:[70,70],maxZoom:12});}
 function flyCoords(lat,lng){map.flyTo([lat,lng],13,{duration:1.5});}
 
-/* SEARCH */
-let srchGrp=null;
-document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('mapSrch').addEventListener('input',function(){
-    if(srchGrp){map.removeLayer(srchGrp);srchGrp=null;}
-    Object.keys(CATS).forEach(cat=>{map.removeLayer(catGrps[cat]);if(vis[cat])catGrps[cat].addTo(map);});
-    const q=this.value.toLowerCase().trim();
-    if(!q)return;
-    Object.keys(CATS).forEach(cat=>map.removeLayer(catGrps[cat]));
-    srchGrp=L.layerGroup().addTo(map);
-    const hits=F.filter(f=>f.n.toLowerCase().includes(q)||f.d.toLowerCase().includes(q)||CATS[f.c].label.toLowerCase().includes(q)||(f.recog||'').toLowerCase().includes(q)||(f.type||'').toLowerCase().includes(q));
-    hits.forEach(f=>mkMkr(f).addTo(srchGrp));
-    if(hits.length===1)map.flyTo([hits[0].lat,hits[0].lng],14,{duration:1.2});
-    else if(hits.length>1)map.fitBounds(L.latLngBounds(hits.map(h=>[h.lat,h.lng])),{padding:[60,60]});
-    document.getElementById('visCount').textContent=hits.length+' results';
+/* ══ SEARCH ══ */
+let srchGrp = null;
+let searchActive = false;
+
+function clearSearch() {
+  const inp = document.getElementById('mapSrch');
+  if (inp) inp.value = '';
+  if (srchGrp) { map.removeLayer(srchGrp); srchGrp = null; }
+  // Restore all point marker layers
+  Object.keys(CATS).forEach(cat => {
+    map.removeLayer(catGrps[cat]);
+    if (vis[cat]) catGrps[cat].addTo(map);
   });
-  document.getElementById('lyrSrch').addEventListener('input',function(){
-    const q=this.value.toLowerCase();
-    document.querySelectorAll('.lgi-row').forEach(el=>el.style.display=(!q||el.querySelector('.lgnm').textContent.toLowerCase().includes(q))?'':'none');
+  // Restore GeoJSON layers to their last toggle state
+  if (indParkVisible && indParkLayer && !map.hasLayer(indParkLayer)) indParkLayer.addTo(map);
+  if (ecrlVisible    && ecrlLayer    && !map.hasLayer(ecrlLayer))    ecrlLayer.addTo(map);
+  if (ktmbVisible    && ktmbLayer    && !map.hasLayer(ktmbLayer))    ktmbLayer.addTo(map);
+  searchActive = false;
+  document.getElementById('visCount').textContent = F.filter(f => vis[f.c]).length + ' features';
+}
+
+function doSearch(q) {
+  q = q.toLowerCase().trim();
+
+  // Clear previous search state
+  if (srchGrp) { map.removeLayer(srchGrp); srchGrp = null; }
+
+  if (!q) { clearSearch(); return; }
+
+  searchActive = true;
+
+  // Hide all point-marker layers while searching
+  Object.keys(CATS).forEach(cat => map.removeLayer(catGrps[cat]));
+
+  srchGrp = L.layerGroup().addTo(map);
+  const bounds = [];
+
+  // ── 1. Point features (F array) ──
+  const ptHits = F.filter(f =>
+    f.n.toLowerCase().includes(q) ||
+    f.d.toLowerCase().includes(q) ||
+    CATS[f.c].label.toLowerCase().includes(q) ||
+    (f.recog || '').toLowerCase().includes(q) ||
+    (f.type  || '').toLowerCase().includes(q) ||
+    (f.c     || '').toLowerCase().includes(q)
+  );
+  ptHits.forEach(f => { mkMkr(f).addTo(srchGrp); bounds.push([f.lat, f.lng]); });
+
+  // ── 2. Industrial park polygons ──
+  const ipHits = [];
+  if (indParkLayer) {
+    indParkLayer.eachLayer(layer => {
+      const p = layer.feature.properties;
+      const nm = (p.Name || '').toLowerCase();
+      if (nm.includes(q) || 'industrial park'.includes(q) || 'halal'.includes(q) && nm.includes('halal') ||
+          'rubber'.includes(q) && nm.includes('rubber') || q === 'pip' && nm.includes('pip') ||
+          nm.includes(q)) {
+        ipHits.push(layer);
+        const b = layer.getBounds();
+        bounds.push(b.getNorthEast(), b.getSouthWest());
+      }
+    });
+    // Highlight matched polygons, dim others
+    indParkLayer.eachLayer(layer => {
+      if (ipHits.includes(layer)) {
+        layer.setStyle({ fillOpacity: 0.45, weight: 2.5, opacity: 1 });
+      } else {
+        layer.setStyle({ fillOpacity: 0.04, weight: 0.8, opacity: 0.3 });
+      }
+    });
+  }
+
+  // ── 3. Railway layers — match by name/keyword ──
+  const railTerms = ['ecrl','east coast rail','ktmb','keretapi','railway','rail','train'];
+  const railMatch = railTerms.some(t => t.includes(q) || q.includes(t));
+  if (railMatch) {
+    [ecrlLayer, ktmbLayer, ktmbNonLayer].forEach(l => {
+      if (l) { const b = l.getBounds(); if (b.isValid()) { bounds.push(b.getNorthEast(), b.getSouthWest()); } }
+    });
+  }
+
+  // ── 4. BEZ districts — match by district/province name ──
+  const bezLayers = [
+    { layer: myBezLayer,  nameKey: 'name' },
+    { layer: thBezLayer,  nameKey: 'name' }
+  ];
+  bezLayers.forEach(({ layer, nameKey }) => {
+    if (!layer) return;
+    layer.eachLayer(sub => {
+      const nm = (sub.feature.properties[nameKey] || '').toLowerCase();
+      if (nm.includes(q) || 'bez border economic zone'.includes(q) || q.includes('bez')) {
+        const b = sub.getBounds();
+        bounds.push(b.getNorthEast(), b.getSouthWest());
+      }
+    });
   });
-});
+
+  // ── Fit map to results ──
+  const total = ptHits.length + ipHits.length;
+  if (bounds.length > 0) {
+    if (bounds.length === 1 || (ptHits.length === 1 && ipHits.length === 0)) {
+      map.flyTo(bounds[0], 14, { duration: 1.2 });
+    } else {
+      map.fitBounds(L.latLngBounds(bounds), { padding: [60, 60], maxZoom: 13 });
+    }
+  }
+
+  // ── Status ──
+  const label = total === 0 ? 'No results' : total + ' result' + (total > 1 ? 's' : '');
+  document.getElementById('visCount').textContent = label;
+}
+
+// Wire up after map is ready (window load, not DOMContentLoaded)
+
 
 /* BASEMAP */
 function setBasemap(n,btn){
@@ -1770,7 +1863,25 @@ function krcOverviewHTML(){
   `;
 }
 
-window.addEventListener('load',()=>{initMap();buildLegend();buildTouristPanel();buildCharts();setTimeout(syncLegend,1500);});
+window.addEventListener('load',()=>{
+  initMap();buildLegend();buildTouristPanel();buildCharts();setTimeout(syncLegend,1500);
+  // Wire search inputs after map is initialised
+  const inp = document.getElementById('mapSrch');
+  if(inp){
+    inp.addEventListener('input', function(){ doSearch(this.value); });
+    inp.addEventListener('keydown', function(e){ if(e.key==='Escape'){ clearSearch(); this.blur(); } });
+  }
+  const lyrInp = document.getElementById('lyrSrch');
+  if(lyrInp){
+    lyrInp.addEventListener('input', function(){
+      const q=this.value.toLowerCase();
+      document.querySelectorAll('.lgi-row').forEach(el=>{
+        const nm=el.querySelector('.lgnm');
+        el.style.display=(!q||(nm&&nm.textContent.toLowerCase().includes(q)))?'':'none';
+      });
+    });
+  }
+});
 </script>
 </body>
 </html>
